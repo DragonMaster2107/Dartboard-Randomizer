@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="Dartboard Randomizer.Tests/Dartboard Randomizer.Tests.csproj" />
   <Project Path="Dartboard Randomizer/Dartboard Randomizer.csproj" />
 </Solution>

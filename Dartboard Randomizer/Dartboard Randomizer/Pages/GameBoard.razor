@@ -1,0 +1,97 @@
+@page "/game"
+@inject GameController Game
+@inject NavigationManager Nav
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    @if (Game.Current is null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            No active game yet. Start one from the setup screen.
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Settings"
+                   OnClick="@(() => Nav.NavigateTo("/"))">
+            Go to setup
+        </MudButton>
+    }
+    else
+    {
+        var g = Game.Current;
+
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h4">Game</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Close"
+                       OnClick="EndGame">
+                End
+            </MudButton>
+        </MudStack>
+
+        <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">
+                @g.StartingScore
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                @($"{g.OutMode} out")
+            </MudChip>
+            @if (g.Randomize)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Shuffle">
+                    Randomized
+                </MudChip>
+            }
+            @if (g.HiddenValues)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.VisibilityOff">
+                    Hidden
+                </MudChip>
+            }
+        </MudStack>
+
+        <MudStack Spacing="2">
+            @for (var i = 0; i < g.Players.Count; i++)
+            {
+                var player = g.Players[i];
+                var isCurrent = i == g.CurrentPlayerIndex;
+                var number = i + 1;   // pro Iteration kopieren: 'i' wird im MudAvatar-RenderFragment sonst verzögert (Endwert) ausgewertet
+                <MudPaper Class="pa-4" Elevation="@(isCurrent ? 6 : 1)" Outlined="@(!isCurrent)"
+                          Style="@(isCurrent ? "border-left: 4px solid var(--mud-palette-primary);" : "")">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <MudAvatar Color="@(isCurrent ? Color.Primary : Color.Surface)" Size="Size.Small">
+                                @number
+                            </MudAvatar>
+                            <MudText Typo="Typo.h6">@player.Name</MudText>
+                            @if (isCurrent)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                                    to throw
+                                </MudChip>
+                            }
+                        </MudStack>
+                        <MudText Typo="Typo.h4">@player.Score</MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
+
+        <MudAlert Severity="Severity.Normal" Class="mt-6" Icon="@Icons.Material.Filled.Construction">
+            Score input (numpad / dartboard) comes next.
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    protected override void OnInitialized() => Game.Changed += OnGameChanged;
+
+    public void Dispose() => Game.Changed -= OnGameChanged;
+
+    private void OnGameChanged() => InvokeAsync(StateHasChanged);
+
+    private void EndGame()
+    {
+        Game.EndGame();
+        Nav.NavigateTo("/");
+    }
+}

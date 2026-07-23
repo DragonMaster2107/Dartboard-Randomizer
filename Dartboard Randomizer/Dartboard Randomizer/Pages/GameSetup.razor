@@ -1,0 +1,179 @@
+@page "/"
+@inject NavigationManager Nav
+@inject GameController Game
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">New Game</MudText>
+
+    @* ---------------- Players ---------------- *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Players</MudText>
+
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudTextField @bind-Value="_newPlayerName"
+                          Immediate="true"
+                          Label="Player name"
+                          Variant="Variant.Outlined"
+                          OnKeyDown="OnNameKeyDown"
+                          Class="flex-grow-1" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddPlayer"
+                       Disabled="@(!CanAddPlayer)">
+                Add
+            </MudButton>
+        </MudStack>
+
+        @if (_players.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No players added yet.</MudText>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                @for (var i = 0; i < _players.Count; i++)
+                {
+                    var index = i;
+                    <MudPaper Class="pa-2 pl-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">@(index + 1)</MudAvatar>
+                                <MudText>@_players[index]</MudText>
+                            </MudStack>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => RemovePlayer(index))" />
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+        }
+    </MudPaper>
+
+    @* ---------------- Game settings ---------------- *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Game settings</MudText>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Starting score</MudText>
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudButton Variant="@PresetVariant(301)" Color="Color.Primary" OnClick="@(() => _startScore = 301)">301</MudButton>
+            <MudButton Variant="@PresetVariant(501)" Color="Color.Primary" OnClick="@(() => _startScore = 501)">501</MudButton>
+            <MudButton Variant="@PresetVariant(701)" Color="Color.Primary" OnClick="@(() => _startScore = 701)">701</MudButton>
+            <MudNumericField @bind-Value="_startScore" Label="Custom" Variant="Variant.Outlined" Min="2" Style="max-width:130px;" />
+        </MudStack>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Checkout</MudText>
+        <MudToggleGroup T="OutMode" @bind-Value="_outMode" Color="Color.Primary">
+            <MudToggleItem Value="OutMode.Straight" Text="Straight" />
+            <MudToggleItem Value="OutMode.Double" Text="Double" />
+            <MudToggleItem Value="OutMode.Master" Text="Master" />
+        </MudToggleGroup>
+    </MudPaper>
+
+    @* ---------------- Randomizer ---------------- *@
+    <MudPaper Class="pa-6 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">Randomizer</MudText>
+
+        <MudSwitch @bind-Value="Randomize" Color="Color.Primary" Label="Randomize board" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
+            Shuffle all field values across the board for the whole game.
+        </MudText>
+
+        <MudSwitch @bind-Value="_hiddenValues" Color="Color.Primary" Label="Hidden values" Disabled="@(!_randomize)" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+            Field values stay hidden until you hit them. Requires Randomize.
+        </MudText>
+
+        @if (_randomize)
+        {
+            <MudTextField @bind-Value="_seed"
+                          Label="Seed (optional)"
+                          Variant="Variant.Outlined"
+                          Class="mt-4"
+                          HelperText="Same seed = same shuffled board. Leave empty for a random one." />
+        }
+    </MudPaper>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               Size="Size.Large"
+               FullWidth="true"
+               StartIcon="@Icons.Material.Filled.PlayArrow"
+               Disabled="@(_players.Count == 0)"
+               OnClick="StartGame">
+        Start game
+    </MudButton>
+</MudContainer>
+
+@code {
+    private readonly List<string> _players = new();
+    private string _newPlayerName = "";
+    private int _startScore = 501;
+    private OutMode _outMode = OutMode.Double;
+    private bool _randomize;
+    private bool _hiddenValues;
+    private string _seed = "";
+
+    private bool CanAddPlayer => !string.IsNullOrWhiteSpace(_newPlayerName);
+
+    // Hidden values only make sense on a randomized board, so switch it off with Randomize.
+    private bool Randomize
+    {
+        get => _randomize;
+        set
+        {
+            _randomize = value;
+            if (!value)
+            {
+                _hiddenValues = false;
+                _seed = "";
+            }
+        }
+    }
+
+    private void AddPlayer()
+    {
+        var name = _newPlayerName.Trim();
+        if (name.Length == 0)
+            return;
+
+        // ignore duplicates (case-insensitive)
+        if (!_players.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase)))
+            _players.Add(name);
+
+        _newPlayerName = "";
+    }
+
+    private void RemovePlayer(int index)
+    {
+        if (index >= 0 && index < _players.Count)
+            _players.RemoveAt(index);
+    }
+
+    private void OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter")
+            AddPlayer();
+    }
+
+    private Variant PresetVariant(int value)
+        => _startScore == value ? Variant.Filled : Variant.Outlined;
+
+    private void StartGame()
+    {
+        int? seed = _randomize && int.TryParse(_seed, out var parsed) ? parsed : null;
+
+        var settings = new GameSettings(
+            PlayerNames: _players.ToList(),   // snapshot, not the live list
+            StartingScore: _startScore,
+            OutMode: _outMode,
+            Randomize: _randomize,
+            HiddenValues: _hiddenValues,
+            Seed: seed);
+
+        Game.StartGame(settings);
+        Nav.NavigateTo("/game");
+    }
+}
