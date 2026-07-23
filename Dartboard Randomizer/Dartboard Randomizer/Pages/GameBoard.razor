@@ -4,7 +4,7 @@
 @inject ISnackbar Snackbar
 @implements IDisposable
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     @if (Game.Current is null)
     {
         <MudAlert Severity="Severity.Info" Class="mb-4">
@@ -20,6 +20,7 @@
     {
         var g = Game.Current;
 
+        <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
             <MudText Typo="Typo.h4">Game</MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
@@ -82,6 +83,7 @@
                 </MudPaper>
             }
         </MudStack>
+        </MudContainer>
 
         @if (g.Randomize && _layout is not null)
         {
