@@ -1,0 +1,43 @@
+.dartboard {
+    width: 100%;
+    max-width: 460px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.dart-field {
+    stroke: #111;
+    stroke-width: 0.5;
+    transition: filter .08s ease-in-out;
+    cursor: pointer;
+}
+
+    .dart-field:hover {
+        filter: brightness(1.35);
+    }
+
+    .dart-field.revealed {
+        stroke: #fff;
+        stroke-width: 0.8;
+    }
+
+.field-label {
+    pointer-events: none;
+    font-family: system-ui, sans-serif;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+
+.outer-number {
+    pointer-events: none;
+    fill: #cfcfcf;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+}

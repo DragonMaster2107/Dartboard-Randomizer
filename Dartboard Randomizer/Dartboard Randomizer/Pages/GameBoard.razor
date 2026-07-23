@@ -1,6 +1,7 @@
 @page "/game"
 @inject GameController Game
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
@@ -47,14 +48,20 @@
                     Hidden
                 </MudChip>
             }
+            @if (g.Seed is int seed)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">
+                    Seed @seed
+                </MudChip>
+            }
         </MudStack>
 
-        <MudStack Spacing="2">
+        <MudStack Spacing="2" Class="mb-6">
             @for (var i = 0; i < g.Players.Count; i++)
             {
                 var player = g.Players[i];
                 var isCurrent = i == g.CurrentPlayerIndex;
-                var number = i + 1;   // pro Iteration kopieren: 'i' wird im MudAvatar-RenderFragment sonst verzögert (Endwert) ausgewertet
+                var number = i + 1;
                 <MudPaper Class="pa-4" Elevation="@(isCurrent ? 6 : 1)" Outlined="@(!isCurrent)"
                           Style="@(isCurrent ? "border-left: 4px solid var(--mud-palette-primary);" : "")">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -76,18 +83,49 @@
             }
         </MudStack>
 
-        <MudAlert Severity="Severity.Normal" Class="mt-6" Icon="@Icons.Material.Filled.Construction">
-            Score input (numpad / dartboard) comes next.
-        </MudAlert>
+        @if (g.Randomize && _layout is not null)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                @(g.HiddenValues ? "Tap the field you hit — its value is revealed." : "Tap the field you hit.")
+            </MudText>
+            <DartBoard Layout="_layout" Hidden="g.HiddenValues" OnFieldHit="HandleFieldHit" />
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Normal" Icon="@Icons.Material.Filled.Construction">
+                Numpad score input comes next.
+            </MudAlert>
+        }
     }
 </MudContainer>
 
 @code {
-    protected override void OnInitialized() => Game.Changed += OnGameChanged;
+    private BoardLayout? _layout;
+
+    protected override void OnInitialized()
+    {
+        Game.Changed += OnGameChanged;
+        RebuildLayout();
+    }
 
     public void Dispose() => Game.Changed -= OnGameChanged;
 
-    private void OnGameChanged() => InvokeAsync(StateHasChanged);
+    private void OnGameChanged()
+    {
+        RebuildLayout();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void RebuildLayout()
+        => _layout = Game.Current is { Randomize: true, Seed: int seed }
+            ? BoardLayout.Shuffled(seed)
+            : null;
+
+    private void HandleFieldHit(FieldValue value)
+    {
+        // Scoring engine kommt als Nächstes; vorerst den aufgedeckten Wert anzeigen.
+        Snackbar.Add($"Hit: {value.ShortLabel}  =  {value.Points}", Severity.Info);
+    }
 
     private void EndGame()
     {

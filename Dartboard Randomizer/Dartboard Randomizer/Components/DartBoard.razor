@@ -1,5 +1,149 @@
-﻿<h3>DartBoard</h3>
+@using System.Globalization
+@using Dartboard_Randomizer.Core.Board
+
+<svg viewBox="-200 -200 400 400" class="dartboard" xmlns="http://www.w3.org/2000/svg">
+    @* Numbered segments: inner single / triple / outer single / double *@
+    @foreach (var f in Geometry)
+    {
+        var pos = new BoardPosition(f.Number, f.Ring);
+        var value = Layout.ValueAt(pos);
+        var shown = IsShown(pos);
+        <path d="@f.Path"
+              fill="@FillFor(f)"
+              class="dart-field @(shown ? "revealed" : "")"
+              @onclick="() => Hit(pos, value)" />
+        @if (shown)
+        {
+            <g><text x="@F(f.Lx)" y="@F(f.Ly)"
+                     class="field-label"
+                     fill="@LabelColorFor(f)"
+                     font-size="@FontSizeFor(f.Ring)">@value.ShortLabel</text></g>
+        }
+    }
+
+    @* Bulls (drawn last so they sit on top) *@
+    <circle cx="0" cy="0" r="15.9" fill="@BullOuterColor"
+            class="dart-field @(IsShown(OuterBull) ? "revealed" : "")"
+            @onclick="() => Hit(OuterBull, Layout.ValueAt(OuterBull))" />
+    <circle cx="0" cy="0" r="6.35" fill="@BullInnerColor"
+            class="dart-field @(IsShown(InnerBull) ? "revealed" : "")"
+            @onclick="() => Hit(InnerBull, Layout.ValueAt(InnerBull))" />
+    @if (IsShown(OuterBull))
+    {
+        <g><text x="0" y="-11.1" class="field-label" fill="#ffffff" font-size="5">@Layout.ValueAt(OuterBull).ShortLabel</text></g>
+    }
+    @if (IsShown(InnerBull))
+    {
+        <g><text x="0" y="0" class="field-label" fill="#ffffff" font-size="7">@Layout.ValueAt(InnerBull).ShortLabel</text></g>
+    }
+
+    @* Printed position numbers around the outside (orientation for aiming) *@
+    @for (var i = 0; i < NumberOrder.Length; i++)
+    {
+        var (x, y) = Polar(RLabel, -90 + i * 18);
+        <g><text x="@F(x)" y="@F(y)" class="outer-number">@NumberOrder[i]</text></g>
+    }
+</svg>
 
 @code {
+    [Parameter, EditorRequired] public BoardLayout Layout { get; set; } = default!;
 
+    /// <summary>Wenn true, sind Werte verdeckt, bis das Feld angeklickt wurde.</summary>
+    [Parameter] public bool Hidden { get; set; }
+
+    /// <summary>Wird ausgelöst, wenn ein Feld getroffen (angeklickt) wurde.</summary>
+    [Parameter] public EventCallback<FieldValue> OnFieldHit { get; set; }
+
+    private readonly HashSet<BoardPosition> _revealed = new();
+
+    private static readonly BoardPosition OuterBull = new(25, BoardRing.OuterBull);
+    private static readonly BoardPosition InnerBull = new(25, BoardRing.InnerBull);
+
+    private bool IsShown(BoardPosition pos) => !Hidden || _revealed.Contains(pos);
+
+    private async Task Hit(BoardPosition pos, FieldValue value)
+    {
+        _revealed.Add(pos);
+        await OnFieldHit.InvokeAsync(value);
+    }
+
+    // ---------- Geometrie (einmal berechnet) ----------
+
+    private static readonly int[] NumberOrder =
+        { 20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5 };
+
+    // Radien in mm (echte Scheibenproportionen), viewBox in denselben Einheiten.
+    private const double RBullOut = 15.9, RTripIn = 99, RTripOut = 107, RDblIn = 162, RDblOut = 170, RLabel = 186;
+
+    private sealed record FieldGeo(int Number, BoardRing Ring, string Path, double Lx, double Ly, bool Odd);
+
+    private static readonly List<FieldGeo> Geometry = BuildGeometry();
+
+    private static List<FieldGeo> BuildGeometry()
+    {
+        var list = new List<FieldGeo>(80);
+        for (var i = 0; i < 20; i++)
+        {
+            var number = NumberOrder[i];
+            var center = -90 + i * 18.0;
+            var start = center - 9;
+            var end = center + 9;
+            var odd = i % 2 == 1;
+
+            list.Add(Band(number, BoardRing.InnerSingle, RBullOut, RTripIn, start, end, center, odd));
+            list.Add(Band(number, BoardRing.Triple, RTripIn, RTripOut, start, end, center, odd));
+            list.Add(Band(number, BoardRing.OuterSingle, RTripOut, RDblIn, start, end, center, odd));
+            list.Add(Band(number, BoardRing.Double, RDblIn, RDblOut, start, end, center, odd));
+        }
+        return list;
+    }
+
+    private static FieldGeo Band(int number, BoardRing ring, double rIn, double rOut,
+                                 double start, double end, double center, bool odd)
+    {
+        var (lx, ly) = Polar((rIn + rOut) / 2, center);
+        return new FieldGeo(number, ring, Sector(rIn, rOut, start, end), lx, ly, odd);
+    }
+
+    private static string Sector(double rIn, double rOut, double startDeg, double endDeg)
+    {
+        var (x1o, y1o) = Polar(rOut, startDeg);
+        var (x2o, y2o) = Polar(rOut, endDeg);
+        var (x1i, y1i) = Polar(rIn, startDeg);
+        var (x2i, y2i) = Polar(rIn, endDeg);
+        return $"M {F(x1o)} {F(y1o)} A {F(rOut)} {F(rOut)} 0 0 1 {F(x2o)} {F(y2o)} " +
+               $"L {F(x2i)} {F(y2i)} A {F(rIn)} {F(rIn)} 0 0 0 {F(x1i)} {F(y1i)} Z";
+    }
+
+    private static (double X, double Y) Polar(double r, double deg)
+    {
+        var rad = deg * Math.PI / 180.0;
+        return (r * Math.Cos(rad), r * Math.Sin(rad));
+    }
+
+    // Kultur-unabhängige Zahl (sonst Komma statt Punkt auf DE-Locale -> kaputtes SVG!)
+    private static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+
+    // ---------- Farben ----------
+
+    private const string BullOuterColor = "#2e7d32";
+    private const string BullInnerColor = "#c0392b";
+
+    private static string FillFor(FieldGeo f) => f.Ring switch
+    {
+        BoardRing.InnerSingle or BoardRing.OuterSingle => f.Odd ? "#2a2a2a" : "#e8d3a0",
+        _ => f.Odd ? "#2e7d32" : "#c0392b", // Triple / Double
+    };
+
+    private static string LabelColorFor(FieldGeo f) => f.Ring switch
+    {
+        BoardRing.InnerSingle or BoardRing.OuterSingle => f.Odd ? "#f5f5f5" : "#1a1a1a",
+        _ => "#ffffff",
+    };
+
+    private static string FontSizeFor(BoardRing ring) => ring switch
+    {
+        BoardRing.InnerSingle or BoardRing.OuterSingle => "9",
+        _ => "6",
+    };
 }

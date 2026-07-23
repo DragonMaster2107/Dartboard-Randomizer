@@ -163,7 +163,9 @@
 
     private void StartGame()
     {
-        int? seed = _randomize && int.TryParse(_seed, out var parsed) ? parsed : null;
+        int? seed = null;
+        if (_randomize)
+            seed = int.TryParse(_seed, out var parsed) ? parsed : Random.Shared.Next();
 
         var settings = new GameSettings(
             PlayerNames: _players.ToList(),   // snapshot, not the live list
