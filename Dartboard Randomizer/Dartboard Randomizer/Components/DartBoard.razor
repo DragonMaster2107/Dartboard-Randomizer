@@ -11,7 +11,7 @@
         <path d="@f.Path"
               fill="@FillFor(f)"
               class="dart-field @(shown ? "revealed" : "")"
-              @onclick="() => Hit(pos, value)" />
+              @onclick="() => Hit(pos)" />
         @if (shown)
         {
             <g><text x="@F(f.Lx)" y="@F(f.Ly)"
@@ -24,10 +24,10 @@
     @* Bulls (drawn last so they sit on top) *@
     <circle cx="0" cy="0" r="15.9" fill="@BullOuterColor"
             class="dart-field @(IsShown(OuterBull) ? "revealed" : "")"
-            @onclick="() => Hit(OuterBull, Layout.ValueAt(OuterBull))" />
+            @onclick="() => Hit(OuterBull)" />
     <circle cx="0" cy="0" r="6.35" fill="@BullInnerColor"
             class="dart-field @(IsShown(InnerBull) ? "revealed" : "")"
-            @onclick="() => Hit(InnerBull, Layout.ValueAt(InnerBull))" />
+            @onclick="() => Hit(InnerBull)" />
     @if (IsShown(OuterBull))
     {
         <g><text x="0" y="-11.1" class="field-label" fill="#ffffff" font-size="5">@Layout.ValueAt(OuterBull).ShortLabel</text></g>
@@ -48,24 +48,23 @@
 @code {
     [Parameter, EditorRequired] public BoardLayout Layout { get; set; } = default!;
 
-    /// <summary>Wenn true, sind Werte verdeckt, bis das Feld angeklickt wurde.</summary>
+    /// <summary>Wenn true, sind Werte verdeckt, bis das Feld aufgedeckt wurde.</summary>
     [Parameter] public bool Hidden { get; set; }
 
-    /// <summary>Wird ausgelöst, wenn ein Feld getroffen (angeklickt) wurde.</summary>
-    [Parameter] public EventCallback<FieldValue> OnFieldHit { get; set; }
+    /// <summary>Bereits aufgedeckte Positionen (kommt aus dem Spielstate).</summary>
+    [Parameter] public IReadOnlySet<BoardPosition> Revealed { get; set; } = EmptyRevealed;
 
-    private readonly HashSet<BoardPosition> _revealed = new();
+    /// <summary>Wird ausgelöst, wenn ein Feld getroffen (angeklickt) wurde.</summary>
+    [Parameter] public EventCallback<BoardPosition> OnHit { get; set; }
+
+    private static readonly IReadOnlySet<BoardPosition> EmptyRevealed = new HashSet<BoardPosition>();
 
     private static readonly BoardPosition OuterBull = new(25, BoardRing.OuterBull);
     private static readonly BoardPosition InnerBull = new(25, BoardRing.InnerBull);
 
-    private bool IsShown(BoardPosition pos) => !Hidden || _revealed.Contains(pos);
+    private bool IsShown(BoardPosition pos) => !Hidden || Revealed.Contains(pos);
 
-    private async Task Hit(BoardPosition pos, FieldValue value)
-    {
-        _revealed.Add(pos);
-        await OnFieldHit.InvokeAsync(value);
-    }
+    private Task Hit(BoardPosition pos) => OnHit.InvokeAsync(pos);
 
     // ---------- Geometrie (einmal berechnet) ----------
 

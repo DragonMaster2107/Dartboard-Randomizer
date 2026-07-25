@@ -1,7 +1,6 @@
 @page "/game"
 @inject GameController Game
 @inject NavigationManager Nav
-@inject ISnackbar Snackbar
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
@@ -23,12 +22,31 @@
         <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
             <MudText Typo="Typo.h4">Game</MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Close"
-                       OnClick="EndGame">
-                End
-            </MudButton>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Undo"
+                           Disabled="@(!Game.CanUndo)" OnClick="Undo">
+                    Undo
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Close"
+                           OnClick="EndGame">
+                    End
+                </MudButton>
+            </MudStack>
         </MudStack>
+
+        @if (g.IsFinished)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4" Icon="@Icons.Material.Filled.EmojiEvents">
+                <b>@g.Winner!.Name</b> wins! 🎯
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-4"
+                       StartIcon="@Icons.Material.Filled.Replay"
+                       OnClick="NewGame">
+                New game
+            </MudButton>
+        }
 
         <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
             <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">
@@ -57,11 +75,33 @@
             }
         </MudStack>
 
+        @if (!g.IsFinished)
+        {
+            <MudPaper Class="pa-3 mb-4" Outlined="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">This turn</MudText>
+                    @for (var d = 0; d < 3; d++)
+                    {
+                        if (d < g.CurrentTurn.Count)
+                        {
+                            var dart = g.CurrentTurn[d];
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@dart.ShortLabel · @dart.Points</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">–</MudChip>
+                        }
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+
         <MudStack Spacing="2" Class="mb-6">
             @for (var i = 0; i < g.Players.Count; i++)
             {
                 var player = g.Players[i];
-                var isCurrent = i == g.CurrentPlayerIndex;
+                var isCurrent = i == g.CurrentPlayerIndex && !g.IsFinished;
+                var isWinner = g.WinnerIndex == i;
                 var number = i + 1;
                 <MudPaper Class="pa-4" Elevation="@(isCurrent ? 6 : 1)" Outlined="@(!isCurrent)"
                           Style="@(isCurrent ? "border-left: 4px solid var(--mud-palette-primary);" : "")">
@@ -77,6 +117,10 @@
                                     to throw
                                 </MudChip>
                             }
+                            @if (isWinner)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Success" />
+                            }
                         </MudStack>
                         <MudText Typo="Typo.h4">@player.Score</MudText>
                     </MudStack>
@@ -85,18 +129,25 @@
         </MudStack>
         </MudContainer>
 
-        @if (g.Randomize && _layout is not null)
+        @if (!g.IsFinished && g.Randomize && _layout is not null)
         {
             <MudText Typo="Typo.subtitle2" Class="mb-2">
-                @(g.HiddenValues ? "Tap the field you hit — its value is revealed." : "Tap the field you hit.")
+                @(g.HiddenValues ? "Tap the field you hit — its value is revealed and scored." : "Tap the field you hit.")
             </MudText>
-            <DartBoard Layout="_layout" Hidden="g.HiddenValues" OnFieldHit="HandleFieldHit" />
+            <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions" OnHit="HandleBoardHit" />
+            <div class="d-flex justify-center mt-3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.RemoveCircleOutline"
+                           OnClick="@(() => Game.RecordThrow(FieldValue.Miss))">
+                    Miss (0)
+                </MudButton>
+            </div>
         }
-        else
+        else if (!g.IsFinished)
         {
-            <MudAlert Severity="Severity.Normal" Icon="@Icons.Material.Filled.Construction">
-                Numpad score input comes next.
-            </MudAlert>
+            <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
+                <Numpad OnDart="HandleDart" />
+            </MudContainer>
         }
     }
 </MudContainer>
@@ -123,13 +174,21 @@
             ? BoardLayout.Shuffled(seed)
             : null;
 
-    private void HandleFieldHit(FieldValue value)
-    {
-        // Scoring engine kommt als Nächstes; vorerst den aufgedeckten Wert anzeigen.
-        Snackbar.Add($"Hit: {value.ShortLabel}  =  {value.Points}", Severity.Info);
-    }
+    // Board hit: look up the (shuffled) value for the hit position and reveal it.
+    private void HandleBoardHit(BoardPosition pos) => Game.RecordThrow(_layout!.ValueAt(pos), pos);
+
+    // Numpad: a plain dart, no board position to reveal.
+    private void HandleDart(FieldValue value) => Game.RecordThrow(value);
+
+    private void Undo() => Game.Undo();
 
     private void EndGame()
+    {
+        Game.EndGame();
+        Nav.NavigateTo("/");
+    }
+
+    private void NewGame()
     {
         Game.EndGame();
         Nav.NavigateTo("/");

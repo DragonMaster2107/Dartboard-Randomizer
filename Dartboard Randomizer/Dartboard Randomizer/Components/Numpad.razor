@@ -1,5 +1,64 @@
-﻿<h3>Numpad</h3>
+@using Dartboard_Randomizer.Core.Board
+
+<div class="numpad">
+    <MudToggleGroup T="Multiplier" @bind-Value="_mult" Color="Color.Primary" Class="mb-3">
+        <MudToggleItem Value="Multiplier.Single" Text="Single" />
+        <MudToggleItem Value="Multiplier.Double" Text="Double" />
+        <MudToggleItem Value="Multiplier.Triple" Text="Triple" />
+    </MudToggleGroup>
+
+    <div class="numpad-grid">
+        @for (var n = 1; n <= 20; n++)
+        {
+            var num = n;
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" FullWidth="true"
+                       Disabled="Disabled" OnClick="() => Number(num)">
+                @Label(num)
+            </MudButton>
+        }
+    </div>
+
+    <div class="numpad-grid numpad-grid--three mt-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true"
+                   Disabled="Disabled" OnClick="() => Bull(false)">
+            25
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true"
+                   Disabled="Disabled" OnClick="() => Bull(true)">
+            BULL 50
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" FullWidth="true"
+                   Disabled="Disabled" OnClick="Miss">
+            MISS
+        </MudButton>
+    </div>
+</div>
 
 @code {
+    [Parameter] public EventCallback<FieldValue> OnDart { get; set; }
+    [Parameter] public bool Disabled { get; set; }
 
+    private Multiplier _mult = Multiplier.Single;
+
+    // Numbers show their current multiplier prefix (D/T) so the active mode is obvious.
+    private string Label(int n) => _mult switch
+    {
+        Multiplier.Double => $"D{n}",
+        Multiplier.Triple => $"T{n}",
+        _ => n.ToString(),
+    };
+
+    private async Task Number(int n)
+    {
+        await OnDart.InvokeAsync(new FieldValue(n, _mult));
+        _mult = Multiplier.Single; // reset after each dart to avoid accidental double/triple
+    }
+
+    private async Task Bull(bool inner)
+    {
+        await OnDart.InvokeAsync(new FieldValue(25, inner ? Multiplier.Double : Multiplier.Single));
+        _mult = Multiplier.Single;
+    }
+
+    private Task Miss() => OnDart.InvokeAsync(FieldValue.Miss);
 }

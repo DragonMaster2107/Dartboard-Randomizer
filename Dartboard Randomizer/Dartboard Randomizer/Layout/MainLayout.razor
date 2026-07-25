@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@inject GameController Game
+@inject GameStorage Storage
+@implements IDisposable
 
 <MudThemeProvider Theme="AppTheme.Dartboard" IsDarkMode="true" />
 <MudPopoverProvider />
@@ -10,3 +13,34 @@
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        // Laufendes Spiel nach Reload wiederherstellen (JS-Interop erst nach erstem Render sicher).
+        if (!Game.HasActiveGame)
+        {
+            var saved = await Storage.LoadAsync();
+            if (saved is not null)
+                Game.Restore(saved);
+        }
+
+        // Ab jetzt jede Änderung persistieren.
+        Game.Changed += OnGameChanged;
+    }
+
+    private void OnGameChanged() => _ = PersistAsync();
+
+    private async Task PersistAsync()
+    {
+        if (Game.Current is null)
+            await Storage.ClearAsync();
+        else
+            await Storage.SaveAsync(Game.Current);
+    }
+
+    public void Dispose() => Game.Changed -= OnGameChanged;
+}

@@ -13,5 +13,6 @@ builder.Services.AddMudServices();
 
 // App-weiter Spielzustand (Scoped == Singleton in WASM: lebt die ganze App-Session).
 builder.Services.AddSingleton<GameController>();
+builder.Services.AddScoped<Dartboard_Randomizer.Core.Services.GameStorage>();
 
 await builder.Build().RunAsync();

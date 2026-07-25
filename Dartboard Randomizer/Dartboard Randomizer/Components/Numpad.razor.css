@@ -1,0 +1,14 @@
+.numpad {
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.numpad-grid--three {
+    grid-template-columns: repeat(3, 1fr);
+}
