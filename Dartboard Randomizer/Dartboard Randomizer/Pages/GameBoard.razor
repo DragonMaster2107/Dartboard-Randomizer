@@ -30,7 +30,7 @@
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.Close"
-                           OnClick="EndAndShowStats">
+                           OnClick="@(() => _confirmEnd = true)">
                     End
                 </MudButton>
             </MudStack>
@@ -134,6 +134,19 @@
             </MudContainer>
         }
 
+        <MudDialog @bind-Visible="_confirmEnd">
+            <TitleContent>
+                <MudText Typo="Typo.h6">End game?</MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudText>End the game now and show the statistics?</MudText>
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="@(() => _confirmEnd = false)">Cancel</MudButton>
+                <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmEnd">End game</MudButton>
+            </DialogActions>
+        </MudDialog>
+
         <MudDialog Visible="g.AwaitingContinueDecision" Options="_dialogOptions">
             <TitleContent>
                 <MudText Typo="Typo.h6">
@@ -154,6 +167,7 @@
 
 @code {
     private BoardLayout? _layout;
+    private bool _confirmEnd;
     private readonly DialogOptions _dialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false };
 
     protected override void OnInitialized()
@@ -192,4 +206,10 @@
     private void Continue() => Game.ContinuePlaying();
 
     private void EndAndShowStats() => Game.EndNow(); // OnGameChanged navigates to /stats
+
+    private void ConfirmEnd()
+    {
+        _confirmEnd = false;
+        Game.EndNow(); // OnGameChanged navigates to /stats
+    }
 }
