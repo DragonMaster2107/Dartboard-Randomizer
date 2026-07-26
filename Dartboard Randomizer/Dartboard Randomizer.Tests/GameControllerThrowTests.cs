@@ -63,7 +63,7 @@ public class GameControllerThrowTests
         var scoreAfterWin = c.Current!.Players[0].Score;
         c.RecordThrow(new FieldValue(20, Multiplier.Single)); // ignored
 
-        Assert.True(c.Current!.IsFinished);
+        Assert.True(c.Current!.IsOver);
         Assert.Equal(scoreAfterWin, c.Current.Players[0].Score);
     }
 

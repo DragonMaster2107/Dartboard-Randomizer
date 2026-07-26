@@ -1,6 +1,7 @@
 @page "/"
 @inject NavigationManager Nav
 @inject GameController Game
+@inject GameStorage Storage
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
@@ -125,6 +126,20 @@
     private void OnGameChanged() => InvokeAsync(StateHasChanged);
     private void Resume() => Nav.NavigateTo("/game");
 
+    // Spieler des letzten Spiels vorbefüllen (nach dem ersten Render, da JS-Interop nötig).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _players.Count > 0)
+            return;
+
+        var last = await Storage.LoadLastPlayersAsync();
+        if (last.Count > 0)
+        {
+            _players.AddRange(last);
+            StateHasChanged();
+        }
+    }
+
     private readonly List<string> _players = new();
     private string _newPlayerName = "";
     private int _startScore = 501;
@@ -178,11 +193,14 @@
     private Variant PresetVariant(int value)
         => _startScore == value ? Variant.Filled : Variant.Outlined;
 
-    private void StartGame()
+    private async Task StartGame()
     {
         int? seed = null;
         if (_randomize)
             seed = int.TryParse(_seed, out var parsed) ? parsed : Random.Shared.Next();
+
+        // Spieler fürs nächste Setup merken.
+        await Storage.SaveLastPlayersAsync(_players.ToList());
 
         var settings = new GameSettings(
             PlayerNames: _players.ToList(),   // snapshot, not the live list

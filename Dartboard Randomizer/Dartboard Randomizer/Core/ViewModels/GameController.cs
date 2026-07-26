@@ -36,7 +36,7 @@ public sealed class GameController
     /// </summary>
     public void RecordThrow(FieldValue dart, BoardPosition? reveal = null)
     {
-        if (Current is null || Current.IsFinished)
+        if (Current is null || !Current.AcceptsThrows)
             return;
 
         _undo.Push(Current);
@@ -56,6 +56,26 @@ public sealed class GameController
             return;
 
         Current = _undo.Pop();
+        NotifyChanged();
+    }
+
+    /// <summary>Antwort auf die Ausspiel-Abfrage: "Ja" — die restlichen Spieler spielen weiter.</summary>
+    public void ContinuePlaying()
+    {
+        if (Current is null || !Current.AwaitingContinueDecision)
+            return;
+
+        Current = ScoringEngine.ResumeAfterFinish(Current);
+        NotifyChanged();
+    }
+
+    /// <summary>Antwort auf die Ausspiel-Abfrage: "Nein" — Spiel sofort beenden (→ Statistik).</summary>
+    public void EndNow()
+    {
+        if (Current is null || Current.IsOver)
+            return;
+
+        Current = Current with { AwaitingContinueDecision = false, IsOver = true };
         NotifyChanged();
     }
 

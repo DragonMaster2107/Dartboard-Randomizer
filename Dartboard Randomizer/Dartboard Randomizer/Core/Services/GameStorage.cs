@@ -14,9 +14,33 @@ namespace Dartboard_Randomizer.Core.Services;
 public sealed class GameStorage
 {
     private const string Key = "dartboard.game";
+    private const string PlayersKey = "dartboard.lastPlayers";
     private readonly IJSRuntime _js;
 
     public GameStorage(IJSRuntime js) => _js = js;
+
+    /// <summary>Merkt sich die zuletzt verwendeten Spielernamen (fürs Vorbefüllen des Setups).</summary>
+    public async Task SaveLastPlayersAsync(IReadOnlyList<string> names)
+    {
+        var json = JsonSerializer.Serialize(names);
+        await _js.InvokeVoidAsync("localStorage.setItem", PlayersKey, json);
+    }
+
+    public async Task<List<string>> LoadLastPlayersAsync()
+    {
+        var json = await _js.InvokeAsync<string?>("localStorage.getItem", PlayersKey);
+        if (string.IsNullOrEmpty(json))
+            return new List<string>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
 
     public async Task SaveAsync(GameState state)
     {
@@ -52,7 +76,8 @@ public sealed class GameStorage
         int? Seed,
         List<FieldValue> CurrentTurn,
         int TurnStartScore,
-        int? WinnerIndex,
+        bool AwaitingContinueDecision,
+        bool IsOver,
         List<BoardPosition> RevealedPositions)
     {
         public static PersistedGame From(GameState s) => new(
@@ -65,7 +90,8 @@ public sealed class GameStorage
             s.Seed,
             s.CurrentTurn.ToList(),
             s.TurnStartScore,
-            s.WinnerIndex,
+            s.AwaitingContinueDecision,
+            s.IsOver,
             s.RevealedPositions.ToList());
 
         public GameState ToState() => new()
@@ -79,7 +105,8 @@ public sealed class GameStorage
             Seed = Seed,
             CurrentTurn = CurrentTurn,
             TurnStartScore = TurnStartScore,
-            WinnerIndex = WinnerIndex,
+            AwaitingContinueDecision = AwaitingContinueDecision,
+            IsOver = IsOver,
             RevealedPositions = RevealedPositions.ToHashSet(),
         };
     }

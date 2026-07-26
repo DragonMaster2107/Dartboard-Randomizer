@@ -4,8 +4,7 @@ namespace Dartboard_Randomizer.Core.Models;
 
 /// <summary>
 /// Der vollständige, unveränderliche Zustand eines laufenden Spiels.
-/// Immutable, damit der Undo-Stack (<c>Stack&lt;GameState&gt;</c>) trivial wird:
-/// jeder Zug erzeugt per <c>with</c> einen neuen Zustand.
+/// Immutable, damit der Undo-Stack (<c>Stack&lt;GameState&gt;</c>) trivial wird.
 /// </summary>
 public sealed record GameState
 {
@@ -23,25 +22,37 @@ public sealed record GameState
     /// <summary>Punktestand des aktuellen Spielers zu Rundenbeginn — für Bust-Revert.</summary>
     public int TurnStartScore { get; init; }
 
-    /// <summary>Index des Gewinners, oder null solange niemand gecheckt hat.</summary>
-    public int? WinnerIndex { get; init; }
-
-    /// <summary>
-    /// Bereits aufgedeckte Positionen im Hidden-Modus — gilt fürs ganze Spiel und lebt
-    /// deshalb hier im State (nicht in der Board-Komponente), übersteht Navigation & Reload.
-    /// </summary>
+    /// <summary>Bereits aufgedeckte Positionen im Hidden-Modus (gilt fürs ganze Spiel).</summary>
     public IReadOnlySet<BoardPosition> RevealedPositions { get; init; } = new HashSet<BoardPosition>();
 
+    /// <summary>
+    /// Ein Spieler hat gerade ausgecheckt, aber es sind noch Spieler übrig — das Spiel
+    /// pausiert und wartet auf die Entscheidung "ausspielen oder beenden".
+    /// </summary>
+    public bool AwaitingContinueDecision { get; init; }
+
+    /// <summary>Das Spiel ist vorbei (alle fertig oder vorzeitig beendet).</summary>
+    public bool IsOver { get; init; }
+
     public PlayerState CurrentPlayer => Players[CurrentPlayerIndex];
-    public bool IsFinished => WinnerIndex is not null;
-    public PlayerState? Winner => WinnerIndex is int i ? Players[i] : null;
-    public int DartsThrownThisTurn => CurrentTurn.Count;
+
+    /// <summary>Nimmt gerade Würfe entgegen? (Nicht während der Ausspiel-Abfrage oder nach Spielende.)</summary>
+    public bool AcceptsThrows => !IsOver && !AwaitingContinueDecision;
+
+    /// <summary>Spieler nach Platzierung: Fertige zuerst (nach Rang), dann Rest nach Reststand.</summary>
+    public IReadOnlyList<PlayerState> Ranking =>
+        Players.OrderBy(p => p.FinishRank ?? int.MaxValue)
+               .ThenBy(p => p.Score)
+               .ToList();
 
     /// <summary>Erzeugt den Anfangszustand aus den Setup-Einstellungen.</summary>
     public static GameState CreateNew(GameSettings settings) => new()
     {
         Players = settings.PlayerNames
-            .Select(name => new PlayerState(name, settings.StartingScore))
+            .Select(name => new PlayerState(name, settings.StartingScore)
+            {
+                ScoreProgression = new List<int> { settings.StartingScore },
+            })
             .ToList(),
         CurrentPlayerIndex = 0,
         OutMode = settings.OutMode,
@@ -51,7 +62,8 @@ public sealed record GameState
         Seed = settings.Seed,
         CurrentTurn = Array.Empty<FieldValue>(),
         TurnStartScore = settings.StartingScore,
-        WinnerIndex = null,
         RevealedPositions = new HashSet<BoardPosition>(),
+        AwaitingContinueDecision = false,
+        IsOver = false,
     };
 }

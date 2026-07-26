@@ -30,23 +30,11 @@
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.Close"
-                           OnClick="EndGame">
+                           OnClick="EndAndShowStats">
                     End
                 </MudButton>
             </MudStack>
         </MudStack>
-
-        @if (g.IsFinished)
-        {
-            <MudAlert Severity="Severity.Success" Class="mb-4" Icon="@Icons.Material.Filled.EmojiEvents">
-                <b>@g.Winner!.Name</b> wins! 🎯
-            </MudAlert>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-4"
-                       StartIcon="@Icons.Material.Filled.Replay"
-                       OnClick="NewGame">
-                New game
-            </MudButton>
-        }
 
         <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
             <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">
@@ -75,33 +63,29 @@
             }
         </MudStack>
 
-        @if (!g.IsFinished)
-        {
-            <MudPaper Class="pa-3 mb-4" Outlined="true">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">This turn</MudText>
-                    @for (var d = 0; d < 3; d++)
+        <MudPaper Class="pa-3 mb-4" Outlined="true">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">This turn</MudText>
+                @for (var d = 0; d < 3; d++)
+                {
+                    if (d < g.CurrentTurn.Count)
                     {
-                        if (d < g.CurrentTurn.Count)
-                        {
-                            var dart = g.CurrentTurn[d];
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@dart.ShortLabel · @dart.Points</MudChip>
-                        }
-                        else
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">–</MudChip>
-                        }
+                        var dart = g.CurrentTurn[d];
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@dart.ShortLabel · @dart.Points</MudChip>
                     }
-                </MudStack>
-            </MudPaper>
-        }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">–</MudChip>
+                    }
+                }
+            </MudStack>
+        </MudPaper>
 
         <MudStack Spacing="2" Class="mb-6">
             @for (var i = 0; i < g.Players.Count; i++)
             {
                 var player = g.Players[i];
-                var isCurrent = i == g.CurrentPlayerIndex && !g.IsFinished;
-                var isWinner = g.WinnerIndex == i;
+                var isCurrent = i == g.CurrentPlayerIndex && g.AcceptsThrows;
                 var number = i + 1;
                 <MudPaper Class="pa-4" Elevation="@(isCurrent ? 6 : 1)" Outlined="@(!isCurrent)"
                           Style="@(isCurrent ? "border-left: 4px solid var(--mud-palette-primary);" : "")">
@@ -111,15 +95,18 @@
                                 @number
                             </MudAvatar>
                             <MudText Typo="Typo.h6">@player.Name</MudText>
-                            @if (isCurrent)
+                            @if (player.HasFinished)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                         Icon="@Icons.Material.Filled.EmojiEvents">
+                                    #@player.FinishRank
+                                </MudChip>
+                            }
+                            else if (isCurrent)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
                                     to throw
                                 </MudChip>
-                            }
-                            @if (isWinner)
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Success" />
                             }
                         </MudStack>
                         <MudText Typo="Typo.h4">@player.Score</MudText>
@@ -129,11 +116,8 @@
         </MudStack>
         </MudContainer>
 
-        @if (!g.IsFinished && g.Randomize && _layout is not null)
+        @if (g.AcceptsThrows && g.Randomize && _layout is not null)
         {
-            <MudText Typo="Typo.subtitle2" Class="mb-2">
-                @(g.HiddenValues ? "Tap the field you hit — its value is revealed and scored." : "Tap the field you hit.")
-            </MudText>
             <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions" OnHit="HandleBoardHit" />
             <div class="d-flex justify-center mt-3">
                 <MudButton Variant="Variant.Outlined" Color="Color.Default"
@@ -143,17 +127,34 @@
                 </MudButton>
             </div>
         }
-        else if (!g.IsFinished)
+        else if (g.AcceptsThrows)
         {
             <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
                 <Numpad OnDart="HandleDart" />
             </MudContainer>
         }
+
+        <MudDialog Visible="g.AwaitingContinueDecision" Options="_dialogOptions">
+            <TitleContent>
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Success" Class="mr-2" />
+                    @g.CurrentPlayer.Name finished!
+                </MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudText>Play the game out with the remaining players?</MudText>
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="EndAndShowStats">No, end &amp; show stats</MudButton>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Continue">Yes, play on</MudButton>
+            </DialogActions>
+        </MudDialog>
     }
 </MudContainer>
 
 @code {
     private BoardLayout? _layout;
+    private readonly DialogOptions _dialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false };
 
     protected override void OnInitialized()
     {
@@ -165,6 +166,12 @@
 
     private void OnGameChanged()
     {
+        if (Game.Current?.IsOver == true)
+        {
+            Nav.NavigateTo("/stats");
+            return;
+        }
+
         RebuildLayout();
         InvokeAsync(StateHasChanged);
     }
@@ -182,15 +189,7 @@
 
     private void Undo() => Game.Undo();
 
-    private void EndGame()
-    {
-        Game.EndGame();
-        Nav.NavigateTo("/");
-    }
+    private void Continue() => Game.ContinuePlaying();
 
-    private void NewGame()
-    {
-        Game.EndGame();
-        Nav.NavigateTo("/");
-    }
+    private void EndAndShowStats() => Game.EndNow(); // OnGameChanged navigates to /stats
 }

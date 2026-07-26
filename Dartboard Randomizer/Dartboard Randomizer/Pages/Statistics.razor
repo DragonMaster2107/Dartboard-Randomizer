@@ -1,6 +1,89 @@
-﻿@page "/stats"
-<h3>Statistics</h3>
+@page "/stats"
+@inject GameController Game
+@inject NavigationManager Nav
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    @if (Game.Current is null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">No game to show statistics for.</MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Settings" OnClick="NewGame">
+            Go to setup
+        </MudButton>
+    }
+    else
+    {
+        var g = Game.Current;
+        var winner = g.Ranking.FirstOrDefault(p => p.HasFinished);
+
+        <MudText Typo="Typo.h4" GutterBottom="true">Game statistics</MudText>
+
+        @if (winner is not null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4" Icon="@Icons.Material.Filled.EmojiEvents">
+                <b>@winner.Name</b> wins! 🎯
+            </MudAlert>
+        }
+
+        <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">@g.StartingScore</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Default">@($"{g.OutMode} out")</MudChip>
+            @if (g.Randomize)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Shuffle">Randomized</MudChip>
+            }
+            @if (g.Seed is int seed)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">Seed @seed</MudChip>
+            }
+        </MudStack>
+
+        @if (g.Players.Any(p => p.ScoreProgression.Count > 1))
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-2">Score progression</MudText>
+                <BurndownChart Players="g.Players" StartingScore="g.StartingScore" />
+            </MudPaper>
+        }
+
+        <MudTable Items="g.Ranking" Hover="true" Dense="true" Class="mb-4" Elevation="2">
+            <HeaderContent>
+                <MudTh>#</MudTh>
+                <MudTh>Player</MudTh>
+                <MudTh Style="text-align:right">Darts</MudTh>
+                <MudTh Style="text-align:right">3-dart avg</MudTh>
+                <MudTh Style="text-align:right">Highest turn</MudTh>
+                <MudTh Style="text-align:right">Left</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="#">@(context.FinishRank?.ToString() ?? "–")</MudTd>
+                <MudTd DataLabel="Player">@context.Name</MudTd>
+                <MudTd DataLabel="Darts" Style="text-align:right">@context.DartsThrown</MudTd>
+                <MudTd DataLabel="3-dart avg" Style="text-align:right">@Average(context)</MudTd>
+                <MudTd DataLabel="Highest turn" Style="text-align:right">@context.HighestTurn</MudTd>
+                <MudTd DataLabel="Left" Style="text-align:right">@context.Score</MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.Replay" OnClick="NewGame">
+            New game
+        </MudButton>
+    }
+</MudContainer>
 
 @code {
+    // 3-Dart-Average = erzielte Punkte / geworfene Darts * 3.
+    private string Average(PlayerState p)
+    {
+        var scored = Game.Current!.StartingScore - p.Score;
+        var avg = p.DartsThrown == 0 ? 0.0 : (double)scored / p.DartsThrown * 3;
+        return avg.ToString("F1");
+    }
 
+    private void NewGame()
+    {
+        Game.EndGame();
+        Nav.NavigateTo("/");
+    }
 }
