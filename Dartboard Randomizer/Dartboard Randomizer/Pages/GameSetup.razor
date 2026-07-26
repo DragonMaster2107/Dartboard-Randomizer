@@ -124,7 +124,7 @@
     protected override void OnInitialized() => Game.Changed += OnGameChanged;
     public void Dispose() => Game.Changed -= OnGameChanged;
     private void OnGameChanged() => InvokeAsync(StateHasChanged);
-    private void Resume() => Nav.NavigateTo("/game");
+    private void Resume() => Nav.NavigateTo("game");
 
     // Spieler des letzten Spiels vorbefüllen (nach dem ersten Render, da JS-Interop nötig).
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -211,6 +211,6 @@
             Seed: seed);
 
         Game.StartGame(settings);
-        Nav.NavigateTo("/game");
+        Nav.NavigateTo("game");
     }
 }

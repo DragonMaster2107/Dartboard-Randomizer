@@ -11,7 +11,7 @@
         </MudAlert>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Settings"
-                   OnClick="@(() => Nav.NavigateTo("/"))">
+                   OnClick="@(() => Nav.NavigateTo(""))">
             Go to setup
         </MudButton>
     }
@@ -182,7 +182,7 @@
     {
         if (Game.Current?.IsOver == true)
         {
-            Nav.NavigateTo("/stats");
+            Nav.NavigateTo("stats");
             return;
         }
 
