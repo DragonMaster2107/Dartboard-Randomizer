@@ -63,6 +63,13 @@
                 }
             </MudStack>
         }
+
+        @if (_players.Count > 1)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 d-block">
+                Play order is randomized when the game starts.
+            </MudText>
+        }
     </MudPaper>
 
     @* ---------------- Game settings ---------------- *@
@@ -178,6 +185,16 @@
         _newPlayerName = "";
     }
 
+    // Fisher-Yates
+    private static void Shuffle(IList<string> list)
+    {
+        for (var i = list.Count - 1; i > 0; i--)
+        {
+            var j = Random.Shared.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
     private void RemovePlayer(int index)
     {
         if (index >= 0 && index < _players.Count)
@@ -199,11 +216,15 @@
         if (_randomize)
             seed = int.TryParse(_seed, out var parsed) ? parsed : Random.Shared.Next();
 
-        // Spieler fürs nächste Setup merken.
+        // Eingegebene Reihenfolge fürs nächste Setup merken (stabil für den Nutzer).
         await Storage.SaveLastPlayersAsync(_players.ToList());
 
+        // Startreihenfolge zufällig mischen.
+        var order = _players.ToList();
+        Shuffle(order);
+
         var settings = new GameSettings(
-            PlayerNames: _players.ToList(),   // snapshot, not the live list
+            PlayerNames: order,
             StartingScore: _startScore,
             OutMode: _outMode,
             Randomize: _randomize,

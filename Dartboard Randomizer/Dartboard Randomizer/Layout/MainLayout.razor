@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject GameController Game
 @inject GameStorage Storage
+@inject AppSettings Settings
 @implements IDisposable
 
 <MudThemeProvider Theme="AppTheme.Dartboard" IsDarkMode="true" />
@@ -9,27 +10,61 @@
 <MudSnackbarProvider />
 
 <MudLayout>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudText Typo="Typo.h6">Dartboard Randomizer</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit"
+                       OnClick="@(() => _settingsOpen = true)" aria-label="Settings" />
+    </MudAppBar>
     <MudMainContent Class="pa-4">
         @Body
     </MudMainContent>
 </MudLayout>
 
+<MudDialog @bind-Visible="_settingsOpen">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />Settings
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudSwitch @bind-Value="SwapColors" Color="Color.Primary"
+                   Label="Swap board black/white fields" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _settingsOpen = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
+    private bool _settingsOpen;
+
+    private bool SwapColors
+    {
+        get => Settings.SwapBoardColors;
+        set
+        {
+            Settings.SetSwapBoardColors(value);
+            _ = Storage.SaveBoardColorSwapAsync(value);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
             return;
 
-        // Laufendes Spiel nach Reload wiederherstellen (JS-Interop erst nach erstem Render sicher).
+        // Laufendes Spiel wiederherstellen
         if (!Game.HasActiveGame)
         {
             var saved = await Storage.LoadAsync();
             if (saved is not null)
                 Game.Restore(saved);
         }
-
-        // Ab jetzt jede Änderung persistieren.
         Game.Changed += OnGameChanged;
+
+        // Einstellungen wiederherstellen
+        Settings.SetSwapBoardColors(await Storage.LoadBoardColorSwapAsync());
     }
 
     private void OnGameChanged() => _ = PersistAsync();

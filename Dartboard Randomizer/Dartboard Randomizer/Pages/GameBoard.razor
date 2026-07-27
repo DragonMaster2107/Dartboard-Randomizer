@@ -23,11 +23,14 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
             <MudText Typo="Typo.h4">Game</MudText>
             <MudStack Row="true" Spacing="2">
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Undo"
-                           Disabled="@(!Game.CanUndo)" OnClick="Undo">
-                    Undo
-                </MudButton>
+                @if (g.HiddenValues && g.AcceptsThrows)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Visibility"
+                               OnClick="@(() => _confirmReveal = true)">
+                        Reveal
+                    </MudButton>
+                }
                 <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.Close"
                            OnClick="@(() => _confirmEnd = true)">
@@ -119,20 +122,45 @@
         @if (g.AcceptsThrows && g.Randomize && _layout is not null)
         {
             <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions" OnHit="HandleBoardHit" />
-            <div class="d-flex justify-center mt-3">
+            <MudStack Row="true" Justify="Justify.Center" Spacing="2" Class="mt-3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Undo"
+                           Disabled="@(!Game.CanUndo)" OnClick="Undo">
+                    Undo
+                </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.RemoveCircleOutline"
                            OnClick="@(() => Game.RecordThrow(FieldValue.Miss))">
                     Miss (0)
                 </MudButton>
-            </div>
+            </MudStack>
         }
         else if (g.AcceptsThrows)
         {
             <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
                 <Numpad OnDart="HandleDart" />
+                <MudStack Row="true" Justify="Justify.Center" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Undo"
+                               Disabled="@(!Game.CanUndo)" OnClick="Undo">
+                        Undo
+                    </MudButton>
+                </MudStack>
             </MudContainer>
         }
+
+        <MudDialog @bind-Visible="_confirmReveal">
+            <TitleContent>
+                <MudText Typo="Typo.h6">Reveal the whole board?</MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudText>This uncovers all field values for the rest of the game.</MudText>
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="@(() => _confirmReveal = false)">Cancel</MudButton>
+                <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="ConfirmReveal">Reveal</MudButton>
+            </DialogActions>
+        </MudDialog>
 
         <MudDialog @bind-Visible="_confirmEnd">
             <TitleContent>
@@ -168,6 +196,7 @@
 @code {
     private BoardLayout? _layout;
     private bool _confirmEnd;
+    private bool _confirmReveal;
     private readonly DialogOptions _dialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false };
 
     protected override void OnInitialized()
@@ -211,5 +240,11 @@
     {
         _confirmEnd = false;
         Game.EndNow(); // OnGameChanged navigates to /stats
+    }
+
+    private void ConfirmReveal()
+    {
+        _confirmReveal = false;
+        Game.RevealAll();
     }
 }

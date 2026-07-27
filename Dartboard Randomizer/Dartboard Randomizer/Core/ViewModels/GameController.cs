@@ -49,6 +49,17 @@ public sealed class GameController
         NotifyChanged();
     }
 
+    /// <summary>Deckt im Hidden-Modus das komplette Board auf (rückgängig machbar).</summary>
+    public void RevealAll()
+    {
+        if (Current is null || !Current.AcceptsThrows)
+            return;
+
+        _undo.Push(Current);
+        Current = Current with { RevealedPositions = new HashSet<BoardPosition>(BoardLayout.AllPositions) };
+        NotifyChanged();
+    }
+
     /// <summary>Macht den letzten Dart rückgängig (auch über Spielerwechsel/Bust hinweg).</summary>
     public void Undo()
     {
