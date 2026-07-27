@@ -74,6 +74,14 @@ public sealed class GameStorage
     public async Task<bool> LoadBoardColorSwapAsync()
         => await _js.InvokeAsync<string?>("localStorage.getItem", SwapColorsKey) == "1";
 
+    private const string ShowBannerKey = "dartboard.settings.showTurnBanner";
+
+    public async Task SaveShowTurnBannerAsync(bool value)
+        => await _js.InvokeVoidAsync("localStorage.setItem", ShowBannerKey, value ? "1" : "0");
+
+    public async Task<bool> LoadShowTurnBannerAsync()
+        => await _js.InvokeAsync<string?>("localStorage.getItem", ShowBannerKey) == "1";
+
     private sealed record PersistedGame(
         List<PlayerState> Players,
         int CurrentPlayerIndex,

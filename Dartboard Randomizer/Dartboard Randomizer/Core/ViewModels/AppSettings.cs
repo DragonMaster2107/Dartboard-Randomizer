@@ -9,6 +9,9 @@ public sealed class AppSettings
     /// <summary>Vertauscht die schwarzen/weißen Single-Felder der Scheibe.</summary>
     public bool SwapBoardColors { get; private set; }
 
+    /// <summary>Zeigt auf Mobilgeräten ein festes „Turn-HUD"-Banner oben (Standard: aus).</summary>
+    public bool ShowTurnBanner { get; private set; }
+
     public event Action? Changed;
 
     public void SetSwapBoardColors(bool value)
@@ -17,6 +20,15 @@ public sealed class AppSettings
             return;
 
         SwapBoardColors = value;
+        Changed?.Invoke();
+    }
+
+    public void SetShowTurnBanner(bool value)
+    {
+        if (value == ShowTurnBanner)
+            return;
+
+        ShowTurnBanner = value;
         Changed?.Invoke();
     }
 }

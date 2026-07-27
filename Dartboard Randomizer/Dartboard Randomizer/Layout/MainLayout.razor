@@ -30,6 +30,8 @@
     <DialogContent>
         <MudSwitch @bind-Value="SwapColors" Color="Color.Primary"
                    Label="Swap board black/white fields" />
+        <MudSwitch @bind-Value="ShowBanner" Color="Color.Primary"
+                   Label="Show turn banner (mobile)" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => _settingsOpen = false)">Close</MudButton>
@@ -49,6 +51,16 @@
         }
     }
 
+    private bool ShowBanner
+    {
+        get => Settings.ShowTurnBanner;
+        set
+        {
+            Settings.SetShowTurnBanner(value);
+            _ = Storage.SaveShowTurnBannerAsync(value);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -65,6 +77,7 @@
 
         // Einstellungen wiederherstellen
         Settings.SetSwapBoardColors(await Storage.LoadBoardColorSwapAsync());
+        Settings.SetShowTurnBanner(await Storage.LoadShowTurnBannerAsync());
     }
 
     private void OnGameChanged() => _ = PersistAsync();

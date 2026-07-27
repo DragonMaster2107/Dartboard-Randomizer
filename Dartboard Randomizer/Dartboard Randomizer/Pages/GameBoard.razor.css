@@ -2,9 +2,11 @@
     /* mobile-only: hidden by default, shown on narrow screens */
     display: none;
     position: fixed;
-    top: var(--appbar-h, 56px);
+    top: 48px; /* dense MudAppBar height */
     left: 0;
     right: 0;
+    height: 40px;
+    box-sizing: border-box;
     z-index: 1000;
     align-items: center;
     gap: 10px;
@@ -47,9 +49,19 @@
     padding-left: 8px;
 }
 
-/* show the banner only on narrow (mobile) screens */
+/* pushes page content below the fixed banner so nothing hides behind it */
+.banner-spacer {
+    display: none;
+    height: 40px;
+}
+
+/* show the banner (and its spacer) only on narrow (mobile) screens */
 @media (max-width: 600px) {
     .turn-banner {
         display: flex;
+    }
+
+    .banner-spacer {
+        display: block;
     }
 }
