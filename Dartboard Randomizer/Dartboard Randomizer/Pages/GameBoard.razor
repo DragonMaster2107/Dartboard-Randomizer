@@ -1,6 +1,7 @@
 @page "/game"
 @inject GameController Game
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
@@ -18,6 +19,25 @@
     else
     {
         var g = Game.Current;
+
+        @if (_isMobile && _showBanner && g.AcceptsThrows)
+        {
+            var bannerCheckout = Checkout();
+            <div class="turn-banner">
+                <span class="tb-player">@g.CurrentPlayer.Name</span>
+                <span class="tb-score">@g.CurrentPlayer.Score</span>
+                <span class="tb-darts">
+                    @for (var d = 0; d < 3; d++)
+                    {
+                        <span class="tb-dart">@(d < g.CurrentTurn.Count ? g.CurrentTurn[d].ShortLabel : "–")</span>
+                    }
+                </span>
+                @if (bannerCheckout is not null)
+                {
+                    <span class="tb-checkout">🎯 @string.Join(" ", bannerCheckout.Select(v => v.ShortLabel))</span>
+                }
+            </div>
+        }
 
         <MudContainer MaxWidth="MaxWidth.Small" Class="pa-0">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
@@ -82,6 +102,20 @@
                     }
                 }
             </MudStack>
+            @{
+                var checkout = Checkout();
+            }
+            @if (checkout is not null)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2" Wrap="Wrap.Wrap">
+                    <MudIcon Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Color="Color.Success">Checkout:</MudText>
+                    @foreach (var v in checkout)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">@v.ShortLabel</MudChip>
+                    }
+                </MudStack>
+            }
         </MudPaper>
 
         <MudStack Spacing="2" Class="mb-6">
@@ -117,6 +151,7 @@
                 </MudPaper>
             }
         </MudStack>
+        <div @ref="_sentinel" style="height:1px"></div>
         </MudContainer>
 
         @if (g.AcceptsThrows && g.Randomize && _layout is not null)
@@ -199,13 +234,60 @@
     private bool _confirmReveal;
     private readonly DialogOptions _dialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false };
 
+    // Mobile "turn HUD" banner
+    private ElementReference _sentinel;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<GameBoard>? _selfRef;
+    private bool _isMobile;
+    private bool _showBanner;
+    private bool _observing;
+
     protected override void OnInitialized()
     {
         Game.Changed += OnGameChanged;
         RebuildLayout();
     }
 
-    public void Dispose() => Game.Changed -= OnGameChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", $"{Nav.BaseUri}js/mobile.js");
+            _isMobile = await _module.InvokeAsync<bool>("init");
+            if (_isMobile)
+                StateHasChanged();
+        }
+
+        // Observer erst aufsetzen, wenn der Sentinel (aktives Spiel) gerendert ist.
+        if (_isMobile && !_observing && _module is not null && !string.IsNullOrEmpty(_sentinel.Id))
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await _module.InvokeVoidAsync("observe", _sentinel, _selfRef);
+            _observing = true;
+        }
+    }
+
+    [JSInvokable]
+    public void OnScrolledPast(bool past)
+    {
+        if (_showBanner == past)
+            return;
+
+        _showBanner = past;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Game.Changed -= OnGameChanged;
+
+        if (_module is not null)
+        {
+            _ = _module.InvokeVoidAsync("unobserve", _sentinel);
+            _ = _module.DisposeAsync();
+        }
+        _selfRef?.Dispose();
+    }
 
     private void OnGameChanged()
     {
@@ -223,6 +305,24 @@
         => _layout = Game.Current is { Randomize: true, Seed: int seed }
             ? BoardLayout.Shuffled(seed)
             : null;
+
+    // Bester Checkout aus den verfügbaren Wertigkeiten (Hidden: nur aufgedeckte), oder null.
+    private IReadOnlyList<FieldValue>? Checkout()
+    {
+        var g = Game.Current;
+        if (g is null || !g.AcceptsThrows)
+            return null;
+
+        var board = _layout ?? BoardLayout.Standard();
+        var positions = g.HiddenValues
+            ? (IEnumerable<BoardPosition>)g.RevealedPositions
+            : BoardLayout.AllPositions;
+
+        var available = positions.Select(board.ValueAt).Distinct().ToList();
+        var dartsLeft = 3 - g.CurrentTurn.Count;
+
+        return CheckoutCalculator.Suggest(g.CurrentPlayer.Score, dartsLeft, g.OutMode, available);
+    }
 
     // Board hit: look up the (shuffled) value for the hit position and reveal it.
     private void HandleBoardHit(BoardPosition pos) => Game.RecordThrow(_layout!.ValueAt(pos), pos);

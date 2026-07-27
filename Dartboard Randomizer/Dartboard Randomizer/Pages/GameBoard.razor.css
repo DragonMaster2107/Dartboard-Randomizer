@@ -1,0 +1,47 @@
+.turn-banner {
+    position: fixed;
+    top: var(--appbar-h, 56px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: var(--mud-palette-surface);
+    border-bottom: 2px solid var(--mud-palette-primary);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.tb-player {
+    font-weight: 700;
+    color: var(--mud-palette-primary);
+}
+
+.tb-score {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.tb-darts {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.tb-dart {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 1px 7px;
+    min-width: 1.2rem;
+    text-align: center;
+}
+
+.tb-checkout {
+    color: var(--mud-palette-success);
+    font-weight: 600;
+    margin-left: auto;
+    padding-left: 8px;
+}
