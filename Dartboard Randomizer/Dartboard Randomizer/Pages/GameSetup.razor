@@ -78,9 +78,9 @@
 
         <MudText Typo="Typo.subtitle2" Class="mb-2">Starting score</MudText>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudButton Variant="@PresetVariant(101)" Color="Color.Primary" OnClick="@(() => _startScore = 101)">101</MudButton>
             <MudButton Variant="@PresetVariant(301)" Color="Color.Primary" OnClick="@(() => _startScore = 301)">301</MudButton>
             <MudButton Variant="@PresetVariant(501)" Color="Color.Primary" OnClick="@(() => _startScore = 501)">501</MudButton>
-            <MudButton Variant="@PresetVariant(701)" Color="Color.Primary" OnClick="@(() => _startScore = 701)">701</MudButton>
             <MudNumericField @bind-Value="_startScore" Label="Custom" Variant="Variant.Outlined" Min="2" Style="max-width:130px;" />
         </MudStack>
 
