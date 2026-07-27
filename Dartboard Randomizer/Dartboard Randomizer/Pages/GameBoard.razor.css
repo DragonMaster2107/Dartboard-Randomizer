@@ -1,10 +1,11 @@
 .turn-banner {
+    /* mobile-only: hidden by default, shown on narrow screens */
+    display: none;
     position: fixed;
     top: var(--appbar-h, 56px);
     left: 0;
     right: 0;
     z-index: 1000;
-    display: flex;
     align-items: center;
     gap: 10px;
     padding: 6px 12px;
@@ -44,4 +45,11 @@
     font-weight: 600;
     margin-left: auto;
     padding-left: 8px;
+}
+
+/* show the banner only on narrow (mobile) screens */
+@media (max-width: 600px) {
+    .turn-banner {
+        display: flex;
+    }
 }

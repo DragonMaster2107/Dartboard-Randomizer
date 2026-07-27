@@ -20,7 +20,7 @@
     {
         var g = Game.Current;
 
-        @if (_isMobile && _showBanner && g.AcceptsThrows)
+        @if (_showBanner && g.AcceptsThrows)
         {
             var bannerCheckout = Checkout();
             <div class="turn-banner">
@@ -234,11 +234,10 @@
     private bool _confirmReveal;
     private readonly DialogOptions _dialogOptions = new() { BackdropClick = false, CloseOnEscapeKey = false };
 
-    // Mobile "turn HUD" banner
+    // Mobile "turn HUD" banner (mobile gating is done via CSS media query)
     private ElementReference _sentinel;
     private IJSObjectReference? _module;
     private DotNetObjectReference<GameBoard>? _selfRef;
-    private bool _isMobile;
     private bool _showBanner;
     private bool _observing;
 
@@ -253,13 +252,11 @@
         if (firstRender)
         {
             _module = await JS.InvokeAsync<IJSObjectReference>("import", $"{Nav.BaseUri}js/mobile.js");
-            _isMobile = await _module.InvokeAsync<bool>("init");
-            if (_isMobile)
-                StateHasChanged();
+            await _module.InvokeVoidAsync("init");
         }
 
-        // Observer erst aufsetzen, wenn der Sentinel (aktives Spiel) gerendert ist.
-        if (_isMobile && !_observing && _module is not null && !string.IsNullOrEmpty(_sentinel.Id))
+        // Observer aufsetzen, sobald der Sentinel (aktives Spiel) gerendert ist.
+        if (!_observing && _module is not null && !string.IsNullOrEmpty(_sentinel.Id))
         {
             _selfRef ??= DotNetObjectReference.Create(this);
             await _module.InvokeVoidAsync("observe", _sentinel, _selfRef);

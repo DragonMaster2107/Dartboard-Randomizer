@@ -1,44 +1,30 @@
-// Mobile-only helper: detects small screens and observes a sentinel element so the
-// game page can show a sticky "turn HUD" banner once the player list scrolls out of view.
+// Shows the game page's sticky "turn HUD" banner once the player list scrolls out of view.
+// Uses IntersectionObserver so it works regardless of which element actually scrolls
+// (window or an inner container) and on any real device.
 
 export function init() {
     // publish the app bar height so the banner can sit right below it
     const bar = document.querySelector('.mud-appbar');
     const h = bar ? Math.round(bar.getBoundingClientRect().height) : 56;
     document.documentElement.style.setProperty('--appbar-h', h + 'px');
-
-    // "mobile" = narrow screen (single-column layout). No fragile user-agent sniffing.
-    return window.matchMedia('(max-width: 600px)').matches;
 }
 
 export function observe(sentinel, dotNetRef) {
     if (!sentinel) return;
 
-    let last = null;
-    const check = () => {
-        const bar = document.querySelector('.mud-appbar');
-        const threshold = bar ? bar.getBoundingClientRect().height : 0;
-        // banner shows once the sentinel (right after the player list) goes behind the app bar
-        const past = sentinel.getBoundingClientRect().top < threshold;
-        if (past !== last) {
-            last = past;
-            dotNetRef.invokeMethodAsync('OnScrolledPast', past);
-        }
-    };
+    const bar = document.querySelector('.mud-appbar');
+    const barH = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
 
-    const onScroll = () => requestAnimationFrame(check);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.visualViewport?.addEventListener('scroll', onScroll, { passive: true });
-    window.visualViewport?.addEventListener('resize', onScroll, { passive: true });
-    sentinel._onScroll = onScroll;
+    // rootMargin pulls the "visible" top edge down to the app bar's bottom, so the banner
+    // triggers exactly when the sentinel (right after the player list) hides behind the bar.
+    const obs = new IntersectionObserver((entries) => {
+        dotNetRef.invokeMethodAsync('OnScrolledPast', !entries[0].isIntersecting);
+    }, { rootMargin: `-${barH}px 0px 0px 0px`, threshold: 0 });
 
-    check(); // initial state
+    obs.observe(sentinel);
+    sentinel._obs = obs;
 }
 
 export function unobserve(sentinel) {
-    const fn = sentinel && sentinel._onScroll;
-    if (!fn) return;
-    window.removeEventListener('scroll', fn);
-    window.visualViewport?.removeEventListener('scroll', fn);
-    window.visualViewport?.removeEventListener('resize', fn);
+    try { sentinel && sentinel._obs && sentinel._obs.disconnect(); } catch { }
 }
