@@ -41,7 +41,13 @@ public sealed class GameController
 
         _undo.Push(Current);
 
-        var next = ScoringEngine.ApplyThrow(Current, dart);
+        // Option "RevealDoesNotScore": ein Dart, der ein Feld ERSTMALIG aufdeckt, zählt 0.
+        var isNewReveal = reveal is BoardPosition rp && !Current.RevealedPositions.Contains(rp);
+        var scoringDart = isNewReveal && Current.HiddenValues && Current.RevealDoesNotScore
+            ? FieldValue.Miss
+            : dart;
+
+        var next = ScoringEngine.ApplyThrow(Current, scoringDart);
         if (reveal is BoardPosition pos && !next.RevealedPositions.Contains(pos))
             next = next with { RevealedPositions = new HashSet<BoardPosition>(next.RevealedPositions) { pos } };
 

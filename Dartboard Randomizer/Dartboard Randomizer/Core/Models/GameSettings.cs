@@ -10,4 +10,11 @@ public sealed record GameSettings(
     OutMode OutMode,
     bool Randomize,
     bool HiddenValues,
-    int? Seed);
+    int? Seed)
+{
+    /// <summary>
+    /// Nur im Hidden-Modus: Der Dart, der ein Feld ERSTMALIG aufdeckt, zählt 0.
+    /// Erst Treffer auf bereits aufgedeckte Felder zählen für den Score.
+    /// </summary>
+    public bool RevealDoesNotScore { get; init; }
+}

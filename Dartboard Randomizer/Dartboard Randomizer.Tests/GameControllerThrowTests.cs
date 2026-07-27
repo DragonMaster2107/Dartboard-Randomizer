@@ -90,4 +90,26 @@ public class GameControllerThrowTests
         c.Undo();
         Assert.DoesNotContain(pos, c.Current!.RevealedPositions);
     }
+
+    [Fact]
+    public void RevealDoesNotScore_first_hit_scores_zero_but_repeat_hit_counts()
+    {
+        var c = new GameController();
+        c.StartGame(new GameSettings(new[] { "Alice" }, 501, OutMode.Straight, Randomize: true, HiddenValues: true, Seed: 7)
+        {
+            RevealDoesNotScore = true,
+        });
+
+        var pos = new BoardPosition(20, BoardRing.Triple);
+        var value = new FieldValue(20, Multiplier.Triple); // 60 points
+
+        // first hit only reveals -> no score
+        c.RecordThrow(value, pos);
+        Assert.Equal(501, c.Current!.Players[0].Score);
+        Assert.Contains(pos, c.Current.RevealedPositions);
+
+        // hitting the now-revealed field scores normally
+        c.RecordThrow(value, pos);
+        Assert.Equal(441, c.Current!.Players[0].Score);
+    }
 }

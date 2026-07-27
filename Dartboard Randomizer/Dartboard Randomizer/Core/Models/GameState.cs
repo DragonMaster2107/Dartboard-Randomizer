@@ -14,6 +14,7 @@ public sealed record GameState
     public int StartingScore { get; init; }
     public bool Randomize { get; init; }
     public bool HiddenValues { get; init; }
+    public bool RevealDoesNotScore { get; init; }
     public int? Seed { get; init; }
 
     /// <summary>Die bereits geworfenen Darts der aktuellen Runde (0..3).</summary>
@@ -59,6 +60,7 @@ public sealed record GameState
         StartingScore = settings.StartingScore,
         Randomize = settings.Randomize,
         HiddenValues = settings.HiddenValues,
+        RevealDoesNotScore = settings.RevealDoesNotScore,
         Seed = settings.Seed,
         CurrentTurn = Array.Empty<FieldValue>(),
         TurnStartScore = settings.StartingScore,

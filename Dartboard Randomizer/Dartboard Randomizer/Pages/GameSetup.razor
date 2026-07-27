@@ -101,9 +101,14 @@
             Shuffle all field values across the board for the whole game.
         </MudText>
 
-        <MudSwitch @bind-Value="_hiddenValues" Color="Color.Primary" Label="Hidden values" Disabled="@(!_randomize)" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+        <MudSwitch @bind-Value="Hidden" Color="Color.Primary" Label="Hidden values" Disabled="@(!_randomize)" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
             Field values stay hidden until you hit them. Requires Randomize.
+        </MudText>
+
+        <MudSwitch @bind-Value="_revealNoScore" Color="Color.Primary" Label="First hit only reveals" Disabled="@(!_hiddenValues)" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+            The revealing dart scores 0 — only hits on already-revealed fields count. Requires Hidden values.
         </MudText>
 
         @if (_randomize)
@@ -153,6 +158,7 @@
     private OutMode _outMode = OutMode.Double;
     private bool _randomize;
     private bool _hiddenValues;
+    private bool _revealNoScore;
     private string _seed = "";
 
     private bool CanAddPlayer => !string.IsNullOrWhiteSpace(_newPlayerName);
@@ -167,8 +173,21 @@
             if (!value)
             {
                 _hiddenValues = false;
+                _revealNoScore = false;
                 _seed = "";
             }
+        }
+    }
+
+    // "First hit only reveals" depends on Hidden, so switch it off with Hidden.
+    private bool Hidden
+    {
+        get => _hiddenValues;
+        set
+        {
+            _hiddenValues = value;
+            if (!value)
+                _revealNoScore = false;
         }
     }
 
@@ -229,7 +248,10 @@
             OutMode: _outMode,
             Randomize: _randomize,
             HiddenValues: _hiddenValues,
-            Seed: seed);
+            Seed: seed)
+        {
+            RevealDoesNotScore = _revealNoScore,
+        };
 
         Game.StartGame(settings);
         Nav.NavigateTo("game");
