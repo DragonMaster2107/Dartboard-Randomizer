@@ -3,8 +3,9 @@
 // buttons) stays perfectly still. Transforms are written straight to the DOM here —
 // no Blazor round-trip — so the gesture stays smooth.
 //
-// Gestures: two-finger pinch = zoom, one-finger drag (while zoomed) = pan,
-// double-tap = reset. A plain tap is left alone so field clicks still work.
+// Gestures: two-finger pinch = zoom, one-finger drag (while zoomed) = pan.
+// A plain tap is left alone so field clicks still work. No double-tap reset on purpose:
+// hitting the same field twice in a row (T20, T20) is normal and would wipe the zoom.
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 6;
@@ -15,11 +16,13 @@ export function attach(container, svg) {
 
     const state = { scale: 1, tx: 0, ty: 0 };
     const pointers = new Map();
-    let startDist = 0;
-    let startScale = 1;
-    let startMid = { x: 0, y: 0 };
-    let startTx = 0;
-    let startTy = 0;
+
+    // gesture baseline, re-taken whenever the number of fingers changes
+    let baseDist = 0;
+    let baseScale = 1;
+    let baseMid = { x: 0, y: 0 };
+    let baseTx = 0;
+    let baseTy = 0;
     let panning = false;
 
     const apply = () => {
@@ -28,15 +31,15 @@ export function attach(container, svg) {
     };
 
     const clamp = () => {
-        // keep the board from being dragged completely out of its frame
+        if (state.scale <= MIN_SCALE) {
+            state.tx = 0;
+            state.ty = 0;
+            return;
+        }
         const w = container.clientWidth;
         const h = container.clientHeight;
-        const maxX = 0;
-        const maxY = 0;
-        const minX = w - w * state.scale;
-        const minY = h - h * state.scale;
-        state.tx = Math.min(maxX, Math.max(minX, state.tx));
-        state.ty = Math.min(maxY, Math.max(minY, state.ty));
+        state.tx = Math.min(0, Math.max(w - w * state.scale, state.tx));
+        state.ty = Math.min(0, Math.max(h - h * state.scale, state.ty));
     };
 
     const reset = () => {
@@ -46,63 +49,64 @@ export function attach(container, svg) {
         apply();
     };
 
-    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const local = (e) => {
         const r = container.getBoundingClientRect();
         return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
+    const midOf = (pts) => pts.length === 1
+        ? { ...pts[0] }
+        : { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    const distOf = (pts) => pts.length < 2 ? 0 : Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+
+    // Re-anchor the gesture to the current fingers. Called on every finger add/remove so
+    // adding or lifting a finger never causes a jump.
+    const rebase = () => {
+        const pts = [...pointers.values()].slice(0, 2);
+        if (pts.length === 0) return;
+        baseMid = midOf(pts);
+        baseDist = distOf(pts);
+        baseScale = state.scale;
+        baseTx = state.tx;
+        baseTy = state.ty;
+        panning = false;
+    };
 
     const onDown = (e) => {
+        // keep receiving events even when the finger leaves the board's bounds
+        try { container.setPointerCapture(e.pointerId); } catch { }
         pointers.set(e.pointerId, local(e));
-
-        if (pointers.size === 2) {
-            const [p1, p2] = [...pointers.values()];
-            startDist = dist(p1, p2);
-            startScale = state.scale;
-            startMid = mid(p1, p2);
-            startTx = state.tx;
-            startTy = state.ty;
-        } else if (pointers.size === 1) {
-            // NOTE: deliberately no double-tap-to-reset — hitting the same field twice in
-            // a row is normal in darts (T20, T20) and would wipe the zoom. Use the button.
-            startMid = local(e);
-            startTx = state.tx;
-            startTy = state.ty;
-            panning = false;
-        }
+        rebase();
     };
 
     const onMove = (e) => {
         if (!pointers.has(e.pointerId)) return;
         pointers.set(e.pointerId, local(e));
 
-        if (pointers.size >= 2) {
-            const [p1, p2] = [...pointers.values()];
-            const d = dist(p1, p2);
-            if (startDist > 0) {
-                const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, startScale * (d / startDist)));
-                // keep the pinch midpoint anchored under the fingers
-                const k = next / startScale;
-                state.scale = next;
-                state.tx = startMid.x - (startMid.x - startTx) * k;
-                state.ty = startMid.y - (startMid.y - startTy) * k;
-                clamp();
-                apply();
-            }
+        const pts = [...pointers.values()].slice(0, 2);
+        const curMid = midOf(pts);
+
+        if (pts.length >= 2 && baseDist > 0) {
+            // pinch: scale by finger distance, and keep the point that was under the
+            // fingers at gesture start under the *current* midpoint (this also pans).
+            const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, baseScale * (distOf(pts) / baseDist)));
+            const k = next / baseScale;
+            state.scale = next;
+            state.tx = curMid.x - (baseMid.x - baseTx) * k;
+            state.ty = curMid.y - (baseMid.y - baseTy) * k;
+            clamp();
+            apply();
             e.preventDefault();
             return;
         }
 
-        // single pointer: pan only when zoomed in and moved past the threshold
-        if (state.scale > 1) {
-            const p = local(e);
-            const dx = p.x - startMid.x;
-            const dy = p.y - startMid.y;
+        // single finger: pan only when zoomed in and moved past the threshold
+        if (state.scale > MIN_SCALE) {
+            const dx = curMid.x - baseMid.x;
+            const dy = curMid.y - baseMid.y;
             if (!panning && Math.hypot(dx, dy) > DRAG_THRESHOLD) panning = true;
             if (panning) {
-                state.tx = startTx + dx;
-                state.ty = startTy + dy;
+                state.tx = baseTx + dx;
+                state.ty = baseTy + dy;
                 clamp();
                 apply();
                 e.preventDefault();
@@ -111,16 +115,22 @@ export function attach(container, svg) {
     };
 
     const onUp = (e) => {
+        try { container.releasePointerCapture(e.pointerId); } catch { }
         pointers.delete(e.pointerId);
-        if (pointers.size < 2) startDist = 0;
-        if (pointers.size === 0) panning = false;
+        if (pointers.size === 0) {
+            baseDist = 0;
+            panning = false;
+        } else {
+            rebase(); // continue smoothly with the remaining finger(s)
+        }
     };
 
     container.addEventListener('pointerdown', onDown);
     container.addEventListener('pointermove', onMove, { passive: false });
     container.addEventListener('pointerup', onUp);
     container.addEventListener('pointercancel', onUp);
-    container.addEventListener('pointerleave', onUp);
+    // NOTE: no 'pointerleave' handler — with pointer capture the finger may travel
+    // outside the board mid-gesture, and treating that as "up" caused visible jumps.
 
     // desktop: ctrl/⌘ + wheel zooms the board
     const onWheel = (e) => {
@@ -146,7 +156,6 @@ export function attach(container, svg) {
             container.removeEventListener('pointermove', onMove);
             container.removeEventListener('pointerup', onUp);
             container.removeEventListener('pointercancel', onUp);
-            container.removeEventListener('pointerleave', onUp);
             container.removeEventListener('wheel', onWheel);
         },
     };

@@ -17,12 +17,19 @@
     will-change: transform;
 }
 
+/* Zoom controls/hint are for touch devices — hidden on desktop (there: ctrl + wheel). */
 .board-hint {
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 2px;
     margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+    .board-hint {
+        display: flex;
+    }
 }
 
 .hint-text {
