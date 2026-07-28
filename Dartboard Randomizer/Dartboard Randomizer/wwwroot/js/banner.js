@@ -1,31 +1,46 @@
-// Keeps the turn banner glued to the top of the VISUAL viewport while the page is
-// pinch-zoomed, at constant on-screen size. When not zoomed it does nothing, so the
-// banner keeps its normal CSS position (fixed below the app bar).
+// Keeps the turn banner glued to the top of the VISUAL viewport while pinch-zoomed,
+// at constant on-screen size. While zoomed it tracks the viewport every animation frame
+// (rAF loop) so it stays smooth instead of lagging behind sparse scroll events.
 
 export function initBannerPin() {
     const vv = window.visualViewport;
     if (!vv) return;
 
-    const update = () => {
-        const el = document.querySelector('.turn-banner');
-        if (!el) return;
+    let el = null;
+    let running = false;
 
-        if (vv.scale > 1.01) {
-            // pin to the visible top-left and counter-scale so size stays constant
+    const reset = () => {
+        if (!el) return;
+        el.style.top = '';
+        el.style.width = '';
+        el.style.transform = '';
+        el.style.transformOrigin = '';
+    };
+
+    const frame = () => {
+        if (!el || !el.isConnected) el = document.querySelector('.turn-banner');
+
+        if (el && vv.scale > 1.01) {
+            // pin to the visible top-left, counter-scale to keep constant on-screen size
             el.style.top = '0px';
             el.style.width = (vv.width * vv.scale) + 'px';
             el.style.transformOrigin = '0 0';
-            el.style.transform = `translate(${vv.offsetLeft}px, ${vv.offsetTop}px) scale(${1 / vv.scale})`;
+            el.style.transform = `translate3d(${vv.offsetLeft}px, ${vv.offsetTop}px, 0) scale(${1 / vv.scale})`;
+            requestAnimationFrame(frame); // keep tracking each frame while zoomed
         } else {
-            // not zoomed -> revert to the CSS position (below the app bar, full width)
-            el.style.top = '';
-            el.style.width = '';
-            el.style.transform = '';
-            el.style.transformOrigin = '';
+            running = false;
+            reset();
         }
     };
 
-    vv.addEventListener('scroll', update);
-    vv.addEventListener('resize', update);
-    update();
+    const start = () => {
+        if (!running) {
+            running = true;
+            requestAnimationFrame(frame);
+        }
+    };
+
+    vv.addEventListener('scroll', start);
+    vv.addEventListener('resize', start);
+    start();
 }

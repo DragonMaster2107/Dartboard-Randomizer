@@ -17,6 +17,7 @@
     overflow-x: auto;
     white-space: nowrap;
     font-size: 0.9rem;
+    will-change: transform;
 }
 
 .tb-player {
