@@ -1,11 +1,34 @@
+/* Frame the board zooms/pans inside. touch-action:none hands the gestures to
+   js/boardZoom.js instead of letting the browser zoom the whole page. */
+.board-viewport {
+    max-width: 680px;
+    margin: 0 auto;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    aspect-ratio: 1 / 1;
+}
+
 .dartboard {
     width: 100%;
-    max-width: 680px;
-    height: auto;
+    height: 100%;
     display: block;
-    margin: 0 auto;
-    user-select: none;
-    touch-action: manipulation;
+    will-change: transform;
+}
+
+.board-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.hint-text {
+    font-size: 0.72rem;
+    opacity: 0.55;
+    text-align: center;
 }
 
 .dart-field {

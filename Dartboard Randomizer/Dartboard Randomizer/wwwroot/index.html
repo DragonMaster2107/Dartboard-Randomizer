@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Kein nativer Seiten-Zoom: das Board zoomt in-app (siehe js/boardZoom.js),
+         dadurch bleiben Banner/Buttons ruckelfrei an ihrem Platz. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Dartboard Randomizer</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />

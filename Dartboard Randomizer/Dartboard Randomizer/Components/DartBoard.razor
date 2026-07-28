@@ -1,9 +1,12 @@
 @using System.Globalization
 @using Dartboard_Randomizer.Core.Board
 @inject AppSettings Settings
-@implements IDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IAsyncDisposable
 
-<svg viewBox="-200 -200 400 400" class="dartboard" xmlns="http://www.w3.org/2000/svg">
+<div class="board-viewport" @ref="_container">
+<svg viewBox="-200 -200 400 400" class="dartboard" @ref="_svg" xmlns="http://www.w3.org/2000/svg">
     @* Numbered segments: inner single / triple / outer single / double *@
     @foreach (var f in Geometry)
     {
@@ -46,6 +49,15 @@
         <g><text x="@F(x)" y="@F(y)" class="outer-number">@NumberOrder[i]</text></g>
     }
 </svg>
+</div>
+
+<div class="board-hint">
+    <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.ZoomOutMap" OnClick="ResetZoom">
+        Reset zoom
+    </MudButton>
+    <span class="hint-text">Pinch to zoom · drag to move</span>
+</div>
 
 @code {
     [Parameter, EditorRequired] public BoardLayout Layout { get; set; } = default!;
@@ -69,8 +81,48 @@
     private Task Hit(BoardPosition pos) => OnHit.InvokeAsync(pos);
 
     protected override void OnInitialized() => Settings.Changed += OnSettingsChanged;
-    public void Dispose() => Settings.Changed -= OnSettingsChanged;
     private void OnSettingsChanged() => InvokeAsync(StateHasChanged);
+
+    // ---------- In-App Zoom/Pan (nur das Board, nicht die Seite) ----------
+
+    private ElementReference _container;
+    private ElementReference _svg;
+    private IJSObjectReference? _zoomModule;
+    private IJSObjectReference? _zoomHandle;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _zoomModule = await JS.InvokeAsync<IJSObjectReference>("import", $"{Nav.BaseUri}js/boardZoom.js");
+        _zoomHandle = await _zoomModule.InvokeAsync<IJSObjectReference>("attach", _container, _svg);
+    }
+
+    private async Task ResetZoom()
+    {
+        if (_zoomModule is not null && _zoomHandle is not null)
+            await _zoomModule.InvokeVoidAsync("resetZoom", _zoomHandle);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Settings.Changed -= OnSettingsChanged;
+
+        try
+        {
+            if (_zoomModule is not null && _zoomHandle is not null)
+                await _zoomModule.InvokeVoidAsync("dispose", _zoomHandle);
+            if (_zoomHandle is not null)
+                await _zoomHandle.DisposeAsync();
+            if (_zoomModule is not null)
+                await _zoomModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Seite wird verlassen – nichts zu tun.
+        }
+    }
 
     // ---------- Geometrie (einmal berechnet) ----------
 
