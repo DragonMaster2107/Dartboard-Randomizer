@@ -1,0 +1,17 @@
+/* Player rows are draggable (desktop); the handle hints at it. */
+::deep .player-row {
+    cursor: grab;
+}
+
+::deep .player-row:active {
+    cursor: grabbing;
+}
+
+::deep .drag-handle {
+    opacity: 0.4;
+}
+
+/* MudBlazor marks the drop target while dragging */
+::deep .mud-drop-item-preview {
+    opacity: 0.4;
+}

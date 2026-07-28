@@ -44,30 +44,41 @@
         }
         else
         {
-            <MudStack Spacing="2">
-                @for (var i = 0; i < _players.Count; i++)
-                {
-                    var index = i;
-                    <MudPaper Class="pa-2 pl-4" Elevation="0" Outlined="true">
+            @* Drag & drop reordering (desktop) — the arrow buttons do the same on touch. *@
+            <MudDropContainer T="string" @ref="_dropContainer" Items="_players"
+                              ItemsSelector="@((item, zone) => true)"
+                              ItemDropped="OnPlayerDropped">
+                <ChildContent>
+                    <MudDropZone T="string" AllowReorder="true" />
+                </ChildContent>
+                <ItemRenderer>
+                    <MudPaper Class="pa-2 pl-2 mb-2 player-row" Elevation="0" Outlined="true">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                <MudAvatar Size="Size.Small" Color="Color.Primary">@(index + 1)</MudAvatar>
-                                <MudText>@_players[index]</MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                         Size="Size.Small" Class="drag-handle" />
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">@(_players.IndexOf(context) + 1)</MudAvatar>
+                                <MudText>@context</MudText>
                             </MudStack>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
-                                           Size="Size.Small"
-                                           OnClick="@(() => RemovePlayer(index))" />
+                                           Color="Color.Error" Size="Size.Small"
+                                           OnClick="@(() => RemovePlayer(context))" />
                         </MudStack>
                     </MudPaper>
-                }
-            </MudStack>
+                </ItemRenderer>
+            </MudDropContainer>
         }
 
         @if (_players.Count > 1)
         {
             <MudSwitch @bind-Value="_randomOrder" Color="Color.Primary" Class="mt-2"
                        Label="Randomize play order" />
+            @if (_randomOrder)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block ml-14">
+                    Turn this off to keep the order above.
+                </MudText>
+            }
         }
     </MudPaper>
 
@@ -147,6 +158,7 @@
         if (last.Count > 0)
         {
             _players.AddRange(last);
+            _dropContainer?.Refresh();
             StateHasChanged();
         }
     }
@@ -202,6 +214,26 @@
             _players.Add(name);
 
         _newPlayerName = "";
+        _dropContainer?.Refresh();
+    }
+
+    // ---------- Reihenfolge ändern (Drag & Drop bzw. Pfeil-Buttons) ----------
+
+    private MudDropContainer<string>? _dropContainer;
+
+    private void OnPlayerDropped(MudItemDropInfo<string> info)
+    {
+        var oldIndex = _players.IndexOf(info.Item!);
+        if (oldIndex < 0)
+            return;
+
+        var newIndex = Math.Clamp(info.IndexInZone, 0, _players.Count - 1);
+        if (newIndex == oldIndex)
+            return;
+
+        _players.RemoveAt(oldIndex);
+        _players.Insert(newIndex, info.Item!);
+        _dropContainer?.Refresh();
     }
 
     // Fisher-Yates
@@ -214,10 +246,10 @@
         }
     }
 
-    private void RemovePlayer(int index)
+    private void RemovePlayer(string name)
     {
-        if (index >= 0 && index < _players.Count)
-            _players.RemoveAt(index);
+        _players.Remove(name);
+        _dropContainer?.Refresh();
     }
 
     private void OnNameKeyDown(KeyboardEventArgs e)

@@ -15,6 +15,12 @@ h1:focus {
     outline: none;
 }
 
+/* Main content must clear the dense app bar (48px) so page headers/buttons
+   aren't hidden behind it. */
+.app-main {
+    padding: 56px 16px 24px 16px;
+}
+
 /* --- Von Blazor benötigte System-UI (Ladebalken & Fehleranzeige) --- */
 .loading-progress {
     position: absolute;
