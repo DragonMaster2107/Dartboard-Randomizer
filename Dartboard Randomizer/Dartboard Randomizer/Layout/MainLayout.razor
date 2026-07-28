@@ -2,6 +2,8 @@
 @inject GameController Game
 @inject GameStorage Storage
 @inject AppSettings Settings
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 @implements IDisposable
 
 <MudThemeProvider Theme="AppTheme.Dartboard" IsDarkMode="true" />
@@ -40,6 +42,7 @@
 
 @code {
     private bool _settingsOpen;
+    private IJSObjectReference? _bannerModule;
 
     private bool SwapColors
     {
@@ -78,6 +81,10 @@
         // Einstellungen wiederherstellen
         Settings.SetSwapBoardColors(await Storage.LoadBoardColorSwapAsync());
         Settings.SetShowTurnBanner(await Storage.LoadShowTurnBannerAsync());
+
+        // Banner beim Pinch-Zoom am sichtbaren oberen Rand halten
+        _bannerModule = await JS.InvokeAsync<IJSObjectReference>("import", $"{Nav.BaseUri}js/banner.js");
+        await _bannerModule.InvokeVoidAsync("initBannerPin");
     }
 
     private void OnGameChanged() => _ = PersistAsync();
@@ -90,5 +97,9 @@
             await Storage.SaveAsync(Game.Current);
     }
 
-    public void Dispose() => Game.Changed -= OnGameChanged;
+    public void Dispose()
+    {
+        Game.Changed -= OnGameChanged;
+        _ = _bannerModule?.DisposeAsync();
+    }
 }
