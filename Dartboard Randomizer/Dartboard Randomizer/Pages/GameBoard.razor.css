@@ -1,3 +1,9 @@
+.turn-banner,
+.banner-spacer {
+    --tb-h: 54px; /* Bannerhöhe — der Spacer darunter zieht mit */
+    --tb-over: 72px; /* Überstand beim Pinch-Zoom, siehe .tb-pinned und js/banner.js */
+}
+
 .turn-banner {
     /* mobile-only: hidden by default, shown on narrow screens */
     display: none;
@@ -5,44 +11,56 @@
     top: 48px; /* dense MudAppBar height */
     left: 0;
     right: 0;
-    height: 40px;
+    height: var(--tb-h);
     box-sizing: border-box;
     z-index: 1000;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
+    gap: 12px;
+    padding: 8px 14px;
     background: var(--mud-palette-surface);
     border-bottom: 2px solid var(--mud-palette-primary);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
     overflow-x: auto;
     white-space: nowrap;
-    font-size: 0.9rem;
-    /* Kein will-change: transform — das war für die frühere Frame-für-Frame-Nachführung
-       gedacht. js/banner.js setzt das Transform jetzt nur noch nach Gestenende, und eine
-       dauerhaft vorgehaltene Composite-Ebene kann den Text im gezoomten Zustand
-       unscharf rastern. */
+    font-size: 1rem;
+    /* Die Nachführung in js/banner.js animiert transform pro Frame — eigene
+       Composite-Ebene vorhalten. */
+    will-change: transform;
+}
+
+/* Beim Pinch-Zoom von js/banner.js gesetzt. Das Banner ragt dann oben/links/rechts um
+   --tb-over über den sichtbaren Bereich hinaus, damit beim (unvermeidlich ~1 Frame
+   verzögerten) Nachführen an den Kanten keine Lücke aufblitzt. Der Überstand liegt
+   normalerweise außerhalb des Bildschirms; der Inhalt wird per Padding an seinem Platz
+   gehalten. Die Breite setzt das JS passend dazu. */
+.turn-banner.tb-pinned {
+    height: calc(var(--tb-h) + var(--tb-over));
+    padding-top: calc(8px + var(--tb-over));
+    padding-left: calc(14px + var(--tb-over));
+    padding-right: calc(14px + var(--tb-over));
 }
 
 .tb-player {
     font-weight: 700;
+    font-size: 1.05rem;
     color: var(--mud-palette-primary);
 }
 
 .tb-score {
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1.35rem;
 }
 
 .tb-darts {
     display: inline-flex;
-    gap: 6px;
+    gap: 7px;
 }
 
 .tb-dart {
     background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
-    padding: 1px 7px;
-    min-width: 1.2rem;
+    padding: 2px 9px;
+    min-width: 1.5rem;
     text-align: center;
 }
 
@@ -56,7 +74,7 @@
 /* pushes page content below the fixed banner so nothing hides behind it */
 .banner-spacer {
     display: none;
-    height: 40px;
+    height: var(--tb-h);
 }
 
 /* show the banner (and its spacer) only on narrow (mobile) screens */
