@@ -17,7 +17,10 @@
     overflow-x: auto;
     white-space: nowrap;
     font-size: 0.9rem;
-    will-change: transform;
+    /* Kein will-change: transform — das war für die frühere Frame-für-Frame-Nachführung
+       gedacht. js/banner.js setzt das Transform jetzt nur noch nach Gestenende, und eine
+       dauerhaft vorgehaltene Composite-Ebene kann den Text im gezoomten Zustand
+       unscharf rastern. */
 }
 
 .tb-player {
