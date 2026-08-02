@@ -148,29 +148,47 @@
     private void OnGameChanged() => InvokeAsync(StateHasChanged);
     private void Resume() => Nav.NavigateTo("game");
 
-    // Spieler des letzten Spiels vorbefüllen (nach dem ersten Render, da JS-Interop nötig).
+    // Spieler und Optionen des letzten Spiels vorbefüllen
+    // (nach dem ersten Render, da JS-Interop nötig).
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _players.Count > 0)
+        if (!firstRender || _prefilled)
             return;
 
+        _prefilled = true;
+
         var last = await Storage.LoadLastPlayersAsync();
-        if (last.Count > 0)
+        if (last.Count > 0 && _players.Count == 0)
         {
             _players.AddRange(last);
             _dropContainer?.Refresh();
-            StateHasChanged();
         }
+
+        var setup = await Storage.LoadLastSetupAsync();
+        if (setup is not null)
+        {
+            _startScore = setup.StartingScore;
+            _outMode = setup.OutMode;
+            // Direkt auf die Felder, nicht über die Properties: deren Kopplungslogik
+            // (Randomize aus -> Hidden aus) würde die Reihenfolge hier stören.
+            _randomize = setup.Randomize;
+            _hiddenValues = setup.HiddenValues;
+            _revealNoScore = setup.RevealDoesNotScore;
+            _randomOrder = setup.RandomOrder;
+        }
+
+        StateHasChanged();
     }
 
+    private bool _prefilled;
     private readonly List<string> _players = new();
     private string _newPlayerName = "";
-    private int _startScore = 501;
-    private OutMode _outMode = OutMode.Double;
-    private bool _randomize;
-    private bool _hiddenValues;
-    private bool _revealNoScore;
-    private bool _randomOrder = true;
+    private int _startScore = SetupDefaults.Initial.StartingScore;
+    private OutMode _outMode = SetupDefaults.Initial.OutMode;
+    private bool _randomize = SetupDefaults.Initial.Randomize;
+    private bool _hiddenValues = SetupDefaults.Initial.HiddenValues;
+    private bool _revealNoScore = SetupDefaults.Initial.RevealDoesNotScore;
+    private bool _randomOrder = SetupDefaults.Initial.RandomOrder;
     private string _seed = "";
 
     private bool CanAddPlayer => !string.IsNullOrWhiteSpace(_newPlayerName);
@@ -269,6 +287,15 @@
 
         // Eingegebene Reihenfolge fürs nächste Setup merken (stabil für den Nutzer).
         await Storage.SaveLastPlayersAsync(_players.ToList());
+
+        // Optionen fürs nächste Setup merken (ohne Seed — der wird pro Spiel neu erzeugt).
+        await Storage.SaveLastSetupAsync(new SetupDefaults(
+            StartingScore: _startScore,
+            OutMode: _outMode,
+            Randomize: _randomize,
+            HiddenValues: _hiddenValues,
+            RevealDoesNotScore: _revealNoScore,
+            RandomOrder: _randomOrder));
 
         // Startreihenfolge zufällig mischen (falls aktiviert).
         var order = _players.ToList();

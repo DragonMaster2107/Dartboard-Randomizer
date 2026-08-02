@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # Claude Code local files (never commit)
 .claude/
+
+# Local project context for Claude (not for the repo)
+CLAUDE.md

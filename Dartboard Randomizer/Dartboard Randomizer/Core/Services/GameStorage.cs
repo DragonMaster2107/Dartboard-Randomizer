@@ -42,6 +42,31 @@ public sealed class GameStorage
         }
     }
 
+    private const string SetupKey = "dartboard.lastSetup";
+
+    /// <summary>Merkt sich die zuletzt gewählten Setup-Optionen (fürs Vorbelegen des Setups).</summary>
+    public async Task SaveLastSetupAsync(SetupDefaults setup)
+    {
+        var json = JsonSerializer.Serialize(setup);
+        await _js.InvokeVoidAsync("localStorage.setItem", SetupKey, json);
+    }
+
+    public async Task<SetupDefaults?> LoadLastSetupAsync()
+    {
+        var json = await _js.InvokeAsync<string?>("localStorage.getItem", SetupKey);
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<SetupDefaults>(json)?.Sanitized();
+        }
+        catch
+        {
+            return null; // korruptes/veraltetes Format -> Standardwerte
+        }
+    }
+
     public async Task SaveAsync(GameState state)
     {
         var json = JsonSerializer.Serialize(PersistedGame.From(state));
