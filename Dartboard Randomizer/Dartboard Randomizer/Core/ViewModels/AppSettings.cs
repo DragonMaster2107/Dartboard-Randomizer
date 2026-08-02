@@ -12,6 +12,13 @@ public sealed class AppSettings
     /// <summary>Zeigt auf Mobilgeräten ein festes „Turn-HUD"-Banner oben (Standard: aus).</summary>
     public bool ShowTurnBanner { get; private set; }
 
+    /// <summary>
+    /// Markiert die Felder des Checkout-Vorschlags auf der Scheibe (Standard: <b>an</b>).
+    /// ⚠ Als einzige Einstellung standardmäßig an — <see cref="GameStorage"/> muss einen
+    /// fehlenden localStorage-Eintrag deshalb als „an" lesen, nicht als „aus".
+    /// </summary>
+    public bool HighlightCheckout { get; private set; } = true;
+
     public event Action? Changed;
 
     public void SetSwapBoardColors(bool value)
@@ -29,6 +36,15 @@ public sealed class AppSettings
             return;
 
         ShowTurnBanner = value;
+        Changed?.Invoke();
+    }
+
+    public void SetHighlightCheckout(bool value)
+    {
+        if (value == HighlightCheckout)
+            return;
+
+        HighlightCheckout = value;
         Changed?.Invoke();
     }
 }

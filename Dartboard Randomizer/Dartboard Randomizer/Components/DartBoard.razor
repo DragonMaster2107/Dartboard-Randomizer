@@ -45,6 +45,27 @@
         var (x, y) = Polar(RLabel, -90 + i * 18);
         <g><text x="@F(x)" y="@F(y)" class="outer-number">@NumberOrder[i]</text></g>
     }
+
+    @* Checkout-Hilfe: liegt als eigene Ebene GANZ oben, sonst würde die Kontur eines
+       Feldes vom jeweils später gezeichneten Nachbarfeld überzeichnet. Der nächste Dart
+       kommt zuletzt (also obenauf) und wird am kräftigsten markiert. *@
+    @foreach (var target in Targets.OrderByDescending(t => t.Step))
+    {
+        var cls = target.Step == 0 ? "checkout-target next" : "checkout-target";
+        if (target.Position.Ring is BoardRing.OuterBull)
+        {
+            @* nur Kontur — eine Füllung würde bis über das Inner Bull reichen *@
+            <circle cx="0" cy="0" r="15.9" class="@cls ring" />
+        }
+        else if (target.Position.Ring is BoardRing.InnerBull)
+        {
+            <circle cx="0" cy="0" r="6.35" class="@cls" />
+        }
+        else if (GeoByPosition.TryGetValue(target.Position, out var geo))
+        {
+            <path d="@geo.Path" class="@cls" />
+        }
+    }
 </svg>
 
 @code {
@@ -58,6 +79,15 @@
 
     /// <summary>Wird ausgelöst, wenn ein Feld getroffen (angeklickt) wurde.</summary>
     [Parameter] public EventCallback<BoardPosition> OnHit { get; set; }
+
+    /// <summary>
+    /// Positionen des aktuellen Checkout-Vorschlags, die auf dem Board markiert werden
+    /// (aus <see cref="Dartboard_Randomizer.Core.Scoring.CheckoutTargets"/>).
+    /// </summary>
+    [Parameter] public IReadOnlyList<CheckoutTargets.Target> Targets { get; set; } = EmptyTargets;
+
+    private static readonly IReadOnlyList<CheckoutTargets.Target> EmptyTargets =
+        Array.Empty<CheckoutTargets.Target>();
 
     private static readonly IReadOnlySet<BoardPosition> EmptyRevealed = new HashSet<BoardPosition>();
 
@@ -83,6 +113,10 @@
     private sealed record FieldGeo(int Number, BoardRing Ring, string Path, double Lx, double Ly, bool Odd);
 
     private static readonly List<FieldGeo> Geometry = BuildGeometry();
+
+    // Position -> Geometrie, damit die Checkout-Overlays ihren Pfad nachschlagen können.
+    private static readonly Dictionary<BoardPosition, FieldGeo> GeoByPosition =
+        Geometry.ToDictionary(f => new BoardPosition(f.Number, f.Ring));
 
     private static List<FieldGeo> BuildGeometry()
     {

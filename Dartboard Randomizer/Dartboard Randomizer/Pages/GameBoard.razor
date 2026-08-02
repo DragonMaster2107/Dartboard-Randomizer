@@ -22,7 +22,7 @@
 
         @if (Settings.ShowTurnBanner && g.AcceptsThrows)
         {
-            var bannerCheckout = Checkout();
+            var bannerCheckout = _checkout;
             <div class="turn-banner">
                 <span class="tb-player">@g.CurrentPlayer.Name</span>
                 <span class="tb-score">@g.CurrentPlayer.Score</span>
@@ -104,7 +104,7 @@
                 }
             </MudStack>
             @{
-                var checkout = Checkout();
+                var checkout = _checkout;
             }
             @if (checkout is not null)
             {
@@ -156,7 +156,8 @@
 
         @if (g.AcceptsThrows && g.Randomize && _layout is not null)
         {
-            <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions" OnHit="HandleBoardHit" />
+            <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions"
+                       Targets="VisibleCheckoutTargets" OnHit="HandleBoardHit" />
             <MudStack Row="true" Justify="Justify.Center" Spacing="2" Class="mt-3">
                 <MudButton Variant="Variant.Outlined" Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Undo"
@@ -239,6 +240,7 @@
         Game.Changed += OnGameChanged;
         Settings.Changed += OnSettingsChanged;
         RebuildLayout();
+        RecomputeCheckout();
     }
 
     public void Dispose()
@@ -258,6 +260,7 @@
         }
 
         RebuildLayout();
+        RecomputeCheckout();
         InvokeAsync(StateHasChanged);
     }
 
@@ -267,7 +270,28 @@
             : null;
 
     // Bester Checkout aus den verfügbaren Wertigkeiten (Hidden: nur aufgedeckte), oder null.
-    private IReadOnlyList<FieldValue>? Checkout()
+    // Hängt nur am Spielzustand, wird also bei dessen Änderung einmal berechnet statt bei
+    // jedem Zugriff neu (die Suche ist eine DFS und wird an drei Stellen gebraucht).
+    private IReadOnlyList<FieldValue>? _checkout;
+    private IReadOnlyList<CheckoutTargets.Target> _checkoutTargets = Array.Empty<CheckoutTargets.Target>();
+
+    // Per Einstellung abschaltbar. Die Route selbst bleibt berechnet (Panel und Banner
+    // zeigen sie weiterhin) — nur die Markierung auf der Scheibe entfällt.
+    // Settings.Changed ist abonniert, der Schalter wirkt also sofort.
+    private IReadOnlyList<CheckoutTargets.Target> VisibleCheckoutTargets
+        => Settings.HighlightCheckout ? _checkoutTargets : Array.Empty<CheckoutTargets.Target>();
+
+    private void RecomputeCheckout()
+    {
+        _checkout = FindCheckout();
+
+        var g = Game.Current;
+        _checkoutTargets = g is null
+            ? Array.Empty<CheckoutTargets.Target>()
+            : CheckoutTargets.For(_checkout, _layout, g.HiddenValues, g.RevealedPositions);
+    }
+
+    private IReadOnlyList<FieldValue>? FindCheckout()
     {
         var g = Game.Current;
         if (g is null || !g.AcceptsThrows)

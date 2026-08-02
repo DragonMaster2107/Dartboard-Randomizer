@@ -36,6 +36,29 @@
     stroke-width: 0.8;
 }
 
+/* Checkout-Hilfe. Cyan bewusst gewählt: kollidiert mit keiner Boardfarbe (rot, grün,
+   anthrazit, creme) und liest sich dadurch klar als App-Hinweis statt als Teil der Scheibe.
+   Statisch — keine Animation/kein filter, das würde beim Zoom flackern (siehe .dart-field). */
+.checkout-target {
+    pointer-events: none;
+    fill: rgba(0, 229, 255, 0.16);
+    stroke: rgba(0, 229, 255, 0.75);
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+}
+
+    /* der nächste Dart — deutlich kräftiger als der Rest der Route */
+    .checkout-target.next {
+        fill: rgba(0, 229, 255, 0.32);
+        stroke: #00e5ff;
+        stroke-width: 2.4;
+    }
+
+    /* Outer Bull: Ring statt Fläche, sonst läge die Füllung über dem Inner Bull */
+    .checkout-target.ring {
+        fill: none;
+    }
+
 .field-label {
     pointer-events: none;
     font-family: system-ui, sans-serif;

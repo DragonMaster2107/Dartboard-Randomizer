@@ -26,6 +26,18 @@ public sealed class BoardLayout
 
     public FieldValue ValueAt(BoardPosition position) => _values[IndexOf[position]];
 
+    /// <summary>
+    /// Die Umkehrung von <see cref="ValueAt"/>: alle physischen Positionen, auf denen diese
+    /// Wertigkeit liegt. Meist genau eine — Singles gibt es aber doppelt (Inner + Outer),
+    /// und nach dem Shuffle können die beiden irgendwo auf der Scheibe liegen.
+    /// </summary>
+    public IEnumerable<BoardPosition> PositionsOf(FieldValue value)
+    {
+        for (var i = 0; i < _values.Length; i++)
+            if (_values[i] == value)
+                yield return AllPositions[i];
+    }
+
     public static BoardLayout Standard() => new(StandardValues(), seed: null);
 
     public static BoardLayout Shuffled(int seed)

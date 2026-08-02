@@ -67,6 +67,62 @@ public class BoardLayoutTests
         Assert.Null(BoardLayout.Standard().Seed);
     }
 
+    // ---------- PositionsOf: die Umkehrung von ValueAt (fürs Checkout-Highlight) ----------
+
+    [Theory]
+    [InlineData(1)]      // Standard-Layout
+    [InlineData(77)]     // gemischt
+    [InlineData(4711)]   // gemischt
+    public void PositionsOf_round_trips_through_ValueAt(int seed)
+    {
+        var board = seed == 1 ? BoardLayout.Standard() : BoardLayout.Shuffled(seed);
+
+        // Jede Position muss über ihre eigene Wertigkeit wiederauffindbar sein.
+        Assert.All(BoardLayout.AllPositions,
+            p => Assert.Contains(p, board.PositionsOf(board.ValueAt(p))));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(77)]
+    public void PositionsOf_finds_both_singles_but_only_one_triple_or_double(int seed)
+    {
+        var board = seed == 1 ? BoardLayout.Standard() : BoardLayout.Shuffled(seed);
+
+        // Singles gibt es doppelt (inner + outer) — beide Positionen sind gültige Treffer.
+        Assert.Equal(2, board.PositionsOf(new FieldValue(20, Multiplier.Single)).Count());
+        Assert.Single(board.PositionsOf(new FieldValue(20, Multiplier.Triple)));
+        Assert.Equal(2, board.PositionsOf(new FieldValue(7, Multiplier.Single)).Count());
+        Assert.Single(board.PositionsOf(new FieldValue(7, Multiplier.Double)));
+
+        // Bull: 25 einfach (outer) und 50 (inner) je genau einmal.
+        Assert.Single(board.PositionsOf(new FieldValue(25, Multiplier.Single)));
+        Assert.Single(board.PositionsOf(new FieldValue(25, Multiplier.Double)));
+    }
+
+    [Fact]
+    public void PositionsOf_returns_the_shuffled_position_not_the_standard_one()
+    {
+        var board = BoardLayout.Shuffled(seed: 2024);
+        var t20 = new FieldValue(20, Multiplier.Triple);
+
+        var pos = Assert.Single(board.PositionsOf(t20));
+
+        Assert.Equal(t20, board.ValueAt(pos));
+        // Der Wert ist gewandert — sonst wäre das Highlight im Shuffle-Modus sinnlos.
+        Assert.NotEqual(t20, BoardLayout.Standard().ValueAt(pos));
+    }
+
+    [Fact]
+    public void PositionsOf_returns_nothing_for_a_value_that_is_not_on_the_board()
+    {
+        var board = BoardLayout.Shuffled(seed: 5);
+
+        Assert.Empty(board.PositionsOf(new FieldValue(21, Multiplier.Single)));
+        Assert.Empty(board.PositionsOf(new FieldValue(25, Multiplier.Triple)));
+        Assert.Empty(board.PositionsOf(FieldValue.Miss));
+    }
+
     private static List<int> ValuesOf(BoardLayout board)
         => BoardLayout.AllPositions
             .Select(p => board.ValueAt(p))

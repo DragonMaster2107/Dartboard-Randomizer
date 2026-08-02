@@ -107,6 +107,18 @@ public sealed class GameStorage
     public async Task<bool> LoadShowTurnBannerAsync()
         => await _js.InvokeAsync<string?>("localStorage.getItem", ShowBannerKey) == "1";
 
+    private const string HighlightCheckoutKey = "dartboard.settings.highlightCheckout";
+
+    public async Task SaveHighlightCheckoutAsync(bool value)
+        => await _js.InvokeVoidAsync("localStorage.setItem", HighlightCheckoutKey, value ? "1" : "0");
+
+    /// <summary>
+    /// ⚠ Anders als die übrigen Einstellungen ist diese standardmäßig <b>an</b>: nur ein
+    /// explizites "0" schaltet ab, ein fehlender Eintrag gilt als „an".
+    /// </summary>
+    public async Task<bool> LoadHighlightCheckoutAsync()
+        => await _js.InvokeAsync<string?>("localStorage.getItem", HighlightCheckoutKey) != "0";
+
     private sealed record PersistedGame(
         List<PlayerState> Players,
         int CurrentPlayerIndex,

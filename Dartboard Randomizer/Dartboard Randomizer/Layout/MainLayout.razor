@@ -34,6 +34,8 @@
                    Label="Swap board black/white fields" />
         <MudSwitch @bind-Value="ShowBanner" Color="Color.Primary"
                    Label="Show turn banner (mobile)" />
+        <MudSwitch @bind-Value="HighlightCheckout" Color="Color.Primary"
+                   Label="Highlight checkout fields on board" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => _settingsOpen = false)">Close</MudButton>
@@ -64,6 +66,16 @@
         }
     }
 
+    private bool HighlightCheckout
+    {
+        get => Settings.HighlightCheckout;
+        set
+        {
+            Settings.SetHighlightCheckout(value);
+            _ = Storage.SaveHighlightCheckoutAsync(value);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -81,6 +93,7 @@
         // Einstellungen wiederherstellen
         Settings.SetSwapBoardColors(await Storage.LoadBoardColorSwapAsync());
         Settings.SetShowTurnBanner(await Storage.LoadShowTurnBannerAsync());
+        Settings.SetHighlightCheckout(await Storage.LoadHighlightCheckoutAsync());
 
         // Banner beim Pinch-Zoom am sichtbaren oberen Rand halten
         _bannerModule = await JS.InvokeAsync<IJSObjectReference>("import", $"{Nav.BaseUri}js/banner.js");
