@@ -6,23 +6,35 @@
     margin: 0 auto;
     user-select: none;
     touch-action: manipulation;
+    /* Ohne das blitzt beim Antippen kurz das grau-blaue Tap-Highlight des mobilen
+       Browsers über dem getroffenen Feld auf. */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .dart-field {
     stroke: #111;
     stroke-width: 0.5;
-    transition: filter .08s ease-in-out;
     cursor: pointer;
 }
 
-    .dart-field:hover {
-        filter: brightness(1.35);
+/* Hover-Aufhellung nur für echte Zeigergeräte.
+   Auf Touch bleibt der simulierte :hover nach dem Tap am getroffenen Feld kleben; der
+   animierte `filter` zwingt den Browser dann, das SVG neu zu rastern — bei gezoomter
+   Seite in der hohen Zoom-Auflösung, was als kurzes Flackern der Scheibe sichtbar wird. */
+@media (hover: hover) and (pointer: fine) {
+    .dart-field {
+        transition: filter .08s ease-in-out;
     }
 
-    .dart-field.revealed {
-        stroke: #fff;
-        stroke-width: 0.8;
-    }
+        .dart-field:hover {
+            filter: brightness(1.35);
+        }
+}
+
+.dart-field.revealed {
+    stroke: #fff;
+    stroke-width: 0.8;
+}
 
 .field-label {
     pointer-events: none;
