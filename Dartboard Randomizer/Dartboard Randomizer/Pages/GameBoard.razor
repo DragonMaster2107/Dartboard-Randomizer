@@ -305,7 +305,12 @@
         var available = positions.Select(board.ValueAt).Distinct().ToList();
         var dartsLeft = 3 - g.CurrentTurn.Count;
 
-        return CheckoutCalculator.Suggest(g.CurrentPlayer.Score, dartsLeft, g.OutMode, available);
+        // Nur im Randomize-Modus nach Treffbarkeit gewichten: dort ist die Wertigkeit von
+        // der Position entkoppelt, ein "D8" kann also auf einer breiten Single-Fläche liegen.
+        // Auf dem Standardboard bleibt es beim klassischen Vorschlag (höchste Werte zuerst).
+        var difficulty = g.Randomize ? FieldDifficulty.Map(board, positions) : null;
+
+        return CheckoutCalculator.Suggest(g.CurrentPlayer.Score, dartsLeft, g.OutMode, available, difficulty);
     }
 
     // Board hit: look up the (shuffled) value for the hit position and reveal it.
