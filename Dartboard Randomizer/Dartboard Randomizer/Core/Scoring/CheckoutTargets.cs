@@ -17,11 +17,17 @@ public static class CheckoutTargets
     /// <param name="layout">Das Board dieses Spiels (gemischt oder Standard).</param>
     /// <param name="hiddenValues">Ob das Spiel im Hidden-Modus läuft.</param>
     /// <param name="revealed">Die bereits aufgedeckten Positionen.</param>
+    /// <param name="usable">
+    /// Optional: nur diese Positionen dürfen markiert werden. Im Conquest-Modus sind das die
+    /// Felder, aus denen der Spieler selbst Punkte zieht — sonst würde die Markierung auf
+    /// ein gleichwertiges Feld des Gegners zeigen und die Punkte dorthin schenken.
+    /// </param>
     public static IReadOnlyList<Target> For(
         IReadOnlyList<FieldValue>? route,
         BoardLayout? layout,
         bool hiddenValues,
-        IReadOnlySet<BoardPosition> revealed)
+        IReadOnlySet<BoardPosition> revealed,
+        IReadOnlySet<BoardPosition>? usable = null)
     {
         if (route is null || route.Count == 0 || layout is null)
             return None;
@@ -37,6 +43,10 @@ public static class CheckoutTargets
                 // Highlight den Wert eines noch verdeckten Feldes: Ist eine Single 7
                 // aufgedeckt und die zweite nicht, dürfte nur die aufgedeckte leuchten.
                 if (hiddenValues && !revealed.Contains(pos))
+                    continue;
+
+                // Conquest-Modus: fremde Felder bringen dem Spieler nichts.
+                if (usable is not null && !usable.Contains(pos))
                     continue;
 
                 // Kommt ein Feld mehrfach in der Route vor (T20, T20, D20), gewinnt der

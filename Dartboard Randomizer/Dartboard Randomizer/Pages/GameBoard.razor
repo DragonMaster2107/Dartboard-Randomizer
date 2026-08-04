@@ -79,6 +79,12 @@
                     Hidden
                 </MudChip>
             }
+            @if (g.Conquest)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Flag">
+                    Conquest
+                </MudChip>
+            }
             @if (g.Seed is int seed)
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">
@@ -157,7 +163,8 @@
         @if (g.AcceptsThrows && g.Randomize && _layout is not null)
         {
             <DartBoard Layout="_layout" Hidden="g.HiddenValues" Revealed="g.RevealedPositions"
-                       Targets="VisibleCheckoutTargets" OnHit="HandleBoardHit" />
+                       Targets="VisibleCheckoutTargets" Foreign="_foreignFields"
+                       OnHit="HandleBoardHit" />
             <MudStack Row="true" Justify="Justify.Center" Spacing="2" Class="mt-3">
                 <MudButton Variant="Variant.Outlined" Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Undo"
@@ -215,11 +222,20 @@
             <TitleContent>
                 <MudText Typo="Typo.h6">
                     <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Success" Class="mr-2" />
-                    @g.CurrentPlayer.Name finished!
+                    @FinisherName(g) finished!
                 </MudText>
             </TitleContent>
             <DialogContent>
                 <MudText>Play the game out with the remaining players?</MudText>
+                @* Im Conquest-Modus kann ein Spieler durch den Wurf eines anderen fertig
+                   werden — dann läuft dessen Runde nach "Yes" normal weiter. *@
+                @if (g.PendingFinisherIndex is int fin && fin != g.CurrentPlayerIndex)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                        @g.CurrentPlayer.Name hit a conquered field and finishes the turn
+                        (@(3 - g.CurrentTurn.Count) darts left).
+                    </MudText>
+                }
             </DialogContent>
             <DialogActions>
                 <MudButton OnClick="EndAndShowStats">No, end &amp; show stats</MudButton>
@@ -281,15 +297,35 @@
     private IReadOnlyList<CheckoutTargets.Target> VisibleCheckoutTargets
         => Settings.HighlightCheckout ? _checkoutTargets : Array.Empty<CheckoutTargets.Target>();
 
+    // Felder, die im Conquest-Modus einem anderen (noch spielenden) Spieler gehören.
+    // Leer, wenn der Modifikator aus ist.
+    private IReadOnlySet<BoardPosition> _foreignFields = new HashSet<BoardPosition>();
+
     private void RecomputeCheckout()
     {
         _checkout = FindCheckout();
 
         var g = Game.Current;
-        _checkoutTargets = g is null
-            ? Array.Empty<CheckoutTargets.Target>()
-            : CheckoutTargets.For(_checkout, _layout, g.HiddenValues, g.RevealedPositions);
+        if (g is null)
+        {
+            _checkoutTargets = Array.Empty<CheckoutTargets.Target>();
+            _foreignFields = new HashSet<BoardPosition>();
+            return;
+        }
+
+        _foreignFields = FieldOwnership.ForeignTo(g, g.CurrentPlayerIndex);
+        _checkoutTargets = CheckoutTargets.For(
+            _checkout, _layout, g.HiddenValues, g.RevealedPositions, UsablePositions(g));
     }
+
+    /// <summary>
+    /// Im Conquest-Modus nur die Positionen, aus denen der aktuelle Spieler selbst Punkte
+    /// zieht (eigene, gemeinsame, freie) — sonst <c>null</c> für "alle".
+    /// </summary>
+    private static IReadOnlySet<BoardPosition>? UsablePositions(GameState g)
+        => g.Conquest
+            ? FieldOwnership.UsableBy(g, g.CurrentPlayerIndex, BoardLayout.AllPositions)
+            : null;
 
     private IReadOnlyList<FieldValue>? FindCheckout()
     {
@@ -302,6 +338,13 @@
             ? (IEnumerable<BoardPosition>)g.RevealedPositions
             : BoardLayout.AllPositions;
 
+        // Conquest-Modus: fremde Felder rechnen dem Gegner an, taugen also nicht für den
+        // eigenen Checkout — sie fliegen aus Wertevorrat UND Kostenkarte.
+        if (UsablePositions(g) is IReadOnlySet<BoardPosition> usable)
+            positions = positions.Where(usable.Contains);
+
+        positions = positions.ToList(); // einmal auswerten, wird zweimal gebraucht
+
         var available = positions.Select(board.ValueAt).Distinct().ToList();
         var dartsLeft = 3 - g.CurrentTurn.Count;
 
@@ -312,6 +355,13 @@
 
         return CheckoutCalculator.Suggest(g.CurrentPlayer.Score, dartsLeft, g.OutMode, available, difficulty);
     }
+
+    // Wer die Ausspiel-Abfrage ausgelöst hat. Im Conquest-Modus muss das nicht der Spieler
+    // sein, der geworfen hat (PendingFinisherIndex); ältere Spielstände haben das Feld nicht.
+    private static string FinisherName(GameState g)
+        => g.PendingFinisherIndex is int index && index >= 0 && index < g.Players.Count
+            ? g.Players[index].Name
+            : g.CurrentPlayer.Name;
 
     // Board hit: look up the (shuffled) value for the hit position and reveal it.
     private void HandleBoardHit(BoardPosition pos) => Game.RecordThrow(_layout!.ValueAt(pos), pos);

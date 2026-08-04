@@ -46,6 +46,27 @@
         <g><text x="@F(x)" y="@F(y)" class="outer-number">@NumberOrder[i]</text></g>
     }
 
+    @* Fremdbesitz (Conquest-Modus): Felder, die einem anderen Spieler gehören. Eigene Ebene
+       aus demselben Grund wie die Checkout-Hilfe — und VOR ihr gezeichnet, damit ein
+       Checkout-Ziel obenauf liegt (überschneiden können sie sich zwar nicht, weil der
+       Vorschlag nur eigene Felder nutzt, aber die Reihenfolge macht die Absicht klar). *@
+    @foreach (var pos in Foreign)
+    {
+        if (pos.Ring is BoardRing.OuterBull)
+        {
+            @* nur Kontur — eine Füllung würde bis über das Inner Bull reichen *@
+            <circle cx="0" cy="0" r="15.9" class="foreign-field ring" />
+        }
+        else if (pos.Ring is BoardRing.InnerBull)
+        {
+            <circle cx="0" cy="0" r="6.35" class="foreign-field" />
+        }
+        else if (GeoByPosition.TryGetValue(pos, out var fgeo))
+        {
+            <path d="@fgeo.Path" class="foreign-field" />
+        }
+    }
+
     @* Checkout-Hilfe: liegt als eigene Ebene GANZ oben, sonst würde die Kontur eines
        Feldes vom jeweils später gezeichneten Nachbarfeld überzeichnet. Der nächste Dart
        kommt zuletzt (also obenauf) und wird am kräftigsten markiert. *@
@@ -85,6 +106,11 @@
     /// (aus <see cref="Dartboard_Randomizer.Core.Scoring.CheckoutTargets"/>).
     /// </summary>
     [Parameter] public IReadOnlyList<CheckoutTargets.Target> Targets { get; set; } = EmptyTargets;
+
+    /// <summary>
+    /// Positionen, die im Conquest-Modus einem anderen Spieler gehören — werden rot umrandet.
+    /// </summary>
+    [Parameter] public IReadOnlySet<BoardPosition> Foreign { get; set; } = EmptyRevealed;
 
     private static readonly IReadOnlyList<CheckoutTargets.Target> EmptyTargets =
         Array.Empty<CheckoutTargets.Target>();

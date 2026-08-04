@@ -133,9 +133,15 @@ public sealed class GameStorage
         bool AwaitingContinueDecision,
         bool IsOver,
         List<BoardPosition> RevealedPositions,
-        // Angehängt, nicht eingefügt: ältere Spielstände haben das Feld nicht, System.Text.Json
-        // belegt fehlende Konstruktorparameter mit dem Default -> altes Spiel bleibt X01.
-        GameMode Mode = GameMode.X01)
+        // Angehängt, nicht eingefügt: ältere Spielstände haben die Felder nicht, System.Text.Json
+        // belegt fehlende Konstruktorparameter mit dem Default -> altes Spiel bleibt X01 ohne Conquest.
+        GameMode Mode = GameMode.X01,
+        bool Conquest = false,
+        // ⚠ Als Liste, nicht als Dictionary: BoardPosition ist ein record struct und taugt
+        // nicht als JSON-Objektschlüssel (derselbe Grund, aus dem dieses DTO existiert).
+        List<OwnedField>? FieldOwners = null,
+        List<BoardPosition>? SharedPositions = null,
+        int? PendingFinisherIndex = null)
     {
         public static PersistedGame From(GameState s) => new(
             s.Players.ToList(),
@@ -151,7 +157,11 @@ public sealed class GameStorage
             s.AwaitingContinueDecision,
             s.IsOver,
             s.RevealedPositions.ToList(),
-            s.Mode);
+            s.Mode,
+            s.Conquest,
+            s.FieldOwners.Select(kv => new OwnedField(kv.Key, kv.Value)).ToList(),
+            s.SharedPositions.ToList(),
+            s.PendingFinisherIndex);
 
         public GameState ToState() => new()
         {
@@ -169,6 +179,14 @@ public sealed class GameStorage
             AwaitingContinueDecision = AwaitingContinueDecision,
             IsOver = IsOver,
             RevealedPositions = RevealedPositions.ToHashSet(),
+            Conquest = Conquest,
+            FieldOwners = FieldOwners?.ToDictionary(o => o.Position, o => o.PlayerIndex)
+                          ?? new Dictionary<BoardPosition, int>(),
+            SharedPositions = SharedPositions?.ToHashSet() ?? new HashSet<BoardPosition>(),
+            PendingFinisherIndex = PendingFinisherIndex,
         };
     }
+
+    /// <summary>Ein beanspruchtes Feld für die Serialisierung (siehe <see cref="PersistedGame"/>).</summary>
+    private sealed record OwnedField(BoardPosition Position, int PlayerIndex);
 }

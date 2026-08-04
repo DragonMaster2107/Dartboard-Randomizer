@@ -47,7 +47,9 @@ public sealed class GameController
             ? FieldValue.Miss
             : dart;
 
-        var next = ScoringEngine.ApplyThrow(Current, scoringDart);
+        // Die Position geht mit in die Engine: im Conquest-Modus entscheidet sie, wem die
+        // Punkte angerechnet werden (und wer das Feld beansprucht).
+        var next = ScoringEngine.ApplyThrow(Current, scoringDart, reveal);
         if (reveal is BoardPosition pos && !next.RevealedPositions.Contains(pos))
             next = next with { RevealedPositions = new HashSet<BoardPosition>(next.RevealedPositions) { pos } };
 

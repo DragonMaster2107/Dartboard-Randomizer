@@ -24,4 +24,10 @@ public sealed record GameSettings(
     /// Erst Treffer auf bereits aufgedeckte Felder zählen für den Score.
     /// </summary>
     public bool RevealDoesNotScore { get; init; }
+
+    /// <summary>
+    /// Nur im Hidden-Modus: Wer ein Feld zuerst trifft, <b>besitzt</b> es — jeder weitere
+    /// Treffer darauf zählt für den Besitzer statt für den Werfer.
+    /// </summary>
+    public bool Conquest { get; init; }
 }

@@ -166,8 +166,15 @@
                     </MudText>
 
                     <MudSwitch @bind-Value="_revealNoScore" Color="Color.Primary" Label="First hit only reveals" Disabled="@(!_hiddenValues)" />
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
                         The revealing dart scores 0 — only hits on already-revealed fields count. Requires Hidden values.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="_conquest" Color="Color.Primary" Label="Conquest" Disabled="@(!_hiddenValues)" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+                        Conquer fields by hitting them first — every later hit on a field scores
+                        for its owner, no matter who threw the dart. One Single 1 and the Double 1
+                        stay open to everyone so a checkout is always possible. Requires Hidden values.
                     </MudText>
 
                     @if (_randomize)
@@ -240,6 +247,7 @@
             _randomize = setup.Randomize;
             _hiddenValues = setup.HiddenValues;
             _revealNoScore = setup.RevealDoesNotScore;
+            _conquest = setup.Conquest;
             _randomOrder = setup.RandomOrder;
             _mode = setup.Mode;
         }
@@ -253,7 +261,7 @@
     private bool CanStart => _players.Count >= Mode.MinPlayers;
 
     private int ActiveModifierCount =>
-        (_randomize ? 1 : 0) + (_hiddenValues ? 1 : 0) + (_revealNoScore ? 1 : 0);
+        (_randomize ? 1 : 0) + (_hiddenValues ? 1 : 0) + (_revealNoScore ? 1 : 0) + (_conquest ? 1 : 0);
 
     private bool _prefilled;
     private bool _modePickerOpen;
@@ -266,6 +274,7 @@
     private bool _randomize = SetupDefaults.Initial.Randomize;
     private bool _hiddenValues = SetupDefaults.Initial.HiddenValues;
     private bool _revealNoScore = SetupDefaults.Initial.RevealDoesNotScore;
+    private bool _conquest = SetupDefaults.Initial.Conquest;
     private bool _randomOrder = SetupDefaults.Initial.RandomOrder;
     private string _seed = "";
 
@@ -291,12 +300,13 @@
             {
                 _hiddenValues = false;
                 _revealNoScore = false;
+                _conquest = false;
                 _seed = "";
             }
         }
     }
 
-    // "First hit only reveals" depends on Hidden, so switch it off with Hidden.
+    // "First hit only reveals" und "Conquest" hängen an Hidden, gehen also mit aus.
     private bool Hidden
     {
         get => _hiddenValues;
@@ -304,7 +314,10 @@
         {
             _hiddenValues = value;
             if (!value)
+            {
                 _revealNoScore = false;
+                _conquest = false;
+            }
         }
     }
 
@@ -383,7 +396,8 @@
             HiddenValues: _hiddenValues,
             RevealDoesNotScore: _revealNoScore,
             RandomOrder: _randomOrder,
-            Mode: _mode));
+            Mode: _mode,
+            Conquest: _conquest));
 
         // Startreihenfolge zufällig mischen (falls aktiviert).
         var order = _players.ToList();
@@ -400,6 +414,7 @@
         {
             Mode = _mode,
             RevealDoesNotScore = _revealNoScore,
+            Conquest = _conquest,
         };
 
         Game.StartGame(settings);

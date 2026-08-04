@@ -31,6 +31,33 @@ public sealed record GameState
     public IReadOnlySet<BoardPosition> RevealedPositions { get; init; } = new HashSet<BoardPosition>();
 
     /// <summary>
+    /// Conquest-Modifikator: getroffene Felder gehören dem Spieler, der sie zuerst getroffen
+    /// hat — Punkte gehen an den Besitzer, nicht an den Werfer. Setzt Hidden voraus.
+    /// </summary>
+    public bool Conquest { get; init; }
+
+    /// <summary>
+    /// Position → Spielerindex des Besitzers (nur im Conquest-Modus). Liegt im State, damit
+    /// Undo den Besitz mit zurücknimmt und ein Reload ihn behält.
+    /// </summary>
+    public IReadOnlyDictionary<BoardPosition, int> FieldOwners { get; init; } =
+        new Dictionary<BoardPosition, int>();
+
+    /// <summary>
+    /// Die gemeinsamen Sicherheitsfelder (D1 + eine S1, siehe <see cref="SafeFields"/>) —
+    /// von Anfang an aufgedeckt und nicht beanspruchbar. Wird beim Spielstart aus dem
+    /// Layout abgeleitet und mitgeführt, damit die Engine kein Layout kennen muss.
+    /// </summary>
+    public IReadOnlySet<BoardPosition> SharedPositions { get; init; } = new HashSet<BoardPosition>();
+
+    /// <summary>
+    /// Wer die anstehende Ausspiel-Abfrage ausgelöst hat. Im Conquest-Modus kann das ein
+    /// <b>anderer</b> Spieler als der Werfer sein, deshalb reicht der CurrentPlayerIndex
+    /// für den Dialogtext nicht mehr.
+    /// </summary>
+    public int? PendingFinisherIndex { get; init; }
+
+    /// <summary>
     /// Ein Spieler hat gerade ausgecheckt, aber es sind noch Spieler übrig — das Spiel
     /// pausiert und wartet auf die Entscheidung "ausspielen oder beenden".
     /// </summary>
@@ -50,27 +77,45 @@ public sealed record GameState
                .ThenBy(p => p.Score)
                .ToList();
 
+    /// <summary>
+    /// Die gemeinsamen Sicherheitsfelder für dieses Spiel. Nur im Conquest-Modus relevant;
+    /// dort ist Randomize (und damit ein Seed) Voraussetzung, das Layout ist also
+    /// reproduzierbar ableitbar.
+    /// </summary>
+    private static IReadOnlySet<BoardPosition> SharedFor(GameSettings settings)
+        => settings.Conquest && settings.Seed is int seed
+            ? SafeFields.For(BoardLayout.Shuffled(seed))
+            : new HashSet<BoardPosition>();
+
     /// <summary>Erzeugt den Anfangszustand aus den Setup-Einstellungen.</summary>
-    public static GameState CreateNew(GameSettings settings) => new()
+    public static GameState CreateNew(GameSettings settings)
     {
-        Players = settings.PlayerNames
-            .Select(name => new PlayerState(name, settings.StartingScore)
-            {
-                ScoreProgression = new List<int> { settings.StartingScore },
-            })
-            .ToList(),
-        CurrentPlayerIndex = 0,
-        Mode = settings.Mode,
-        OutMode = settings.OutMode,
-        StartingScore = settings.StartingScore,
-        Randomize = settings.Randomize,
-        HiddenValues = settings.HiddenValues,
-        RevealDoesNotScore = settings.RevealDoesNotScore,
-        Seed = settings.Seed,
-        CurrentTurn = Array.Empty<FieldValue>(),
-        TurnStartScore = settings.StartingScore,
-        RevealedPositions = new HashSet<BoardPosition>(),
-        AwaitingContinueDecision = false,
-        IsOver = false,
-    };
+        var shared = SharedFor(settings);
+        return new GameState
+        {
+            Players = settings.PlayerNames
+                .Select(name => new PlayerState(name, settings.StartingScore)
+                {
+                    ScoreProgression = new List<int> { settings.StartingScore },
+                })
+                .ToList(),
+            CurrentPlayerIndex = 0,
+            Mode = settings.Mode,
+            OutMode = settings.OutMode,
+            StartingScore = settings.StartingScore,
+            Randomize = settings.Randomize,
+            HiddenValues = settings.HiddenValues,
+            RevealDoesNotScore = settings.RevealDoesNotScore,
+            Seed = settings.Seed,
+            CurrentTurn = Array.Empty<FieldValue>(),
+            TurnStartScore = settings.StartingScore,
+            // Die Sicherheitsfelder sind von Anfang an sichtbar — das ist ihr Zweck.
+            RevealedPositions = new HashSet<BoardPosition>(shared),
+            Conquest = settings.Conquest,
+            FieldOwners = new Dictionary<BoardPosition, int>(),
+            SharedPositions = shared,
+            AwaitingContinueDecision = false,
+            IsOver = false,
+        };
+    }
 }

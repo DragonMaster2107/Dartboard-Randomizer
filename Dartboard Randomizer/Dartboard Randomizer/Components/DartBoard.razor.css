@@ -59,6 +59,23 @@
         fill: none;
     }
 
+/* Fremdbesitz im Conquest-Modus. Signalrot (#ff1744) statt des Board-Rots (#c0392b/#d32f2f):
+   deutlich heller und kräftiger gesättigt, damit die Markierung auch mitten im Doppel-
+   oder Triple-Ring als App-Hinweis lesbar bleibt und nicht mit der Scheibe verschmilzt.
+   Statisch wie die Checkout-Hilfe — Animationen lassen die gezoomte Scheibe flackern. */
+.foreign-field {
+    pointer-events: none;
+    fill: rgba(255, 23, 68, 0.22);
+    stroke: #ff1744;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+    /* Outer Bull: Ring statt Fläche, sonst läge die Füllung über dem Inner Bull */
+    .foreign-field.ring {
+        fill: none;
+    }
+
 .field-label {
     pointer-events: none;
     font-family: system-ui, sans-serif;
