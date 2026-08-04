@@ -18,6 +18,28 @@
         </MudPaper>
     }
 
+    @* ---------------- Game mode ---------------- *@
+    @* Kompakte Zeile statt Karten-Galerie: die Auswahl steckt im Dialog, damit die
+       Setup-Seite auch bei vielen Modi ein Screen bleibt. *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            @* min-width:0 inline, damit die Tagline umbricht statt den Change-Button
+               hinauszuschieben — als Komponente bekommt MudStack kein Scope-Attribut. *@
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Style="min-width:0">
+                <MudIcon Icon="@Mode.Icon" Size="Size.Large" Color="Color.Primary" />
+                <div class="mode-summary-text">
+                    <MudText Typo="Typo.h6">@Mode.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Mode.Tagline</MudText>
+                </div>
+            </MudStack>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       EndIcon="@Icons.Material.Filled.ChevronRight"
+                       OnClick="@(() => _modePickerOpen = true)">
+                Change
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
     @* ---------------- Players ---------------- *@
     <MudPaper Class="pa-6 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-3">Players</MudText>
@@ -82,9 +104,13 @@
         }
     </MudPaper>
 
-    @* ---------------- Game settings ---------------- *@
+    @* ---------------- Mode settings (X01) ---------------- *@
+    @* Bleibt bewusst ein eigenes, immer sichtbares Panel — nur Modi-spezifisch, also
+       an den Modus gekoppelt. Weitere Modi bringen hier ihr eigenes Panel mit. *@
+    @if (_mode == GameMode.X01)
+    {
     <MudPaper Class="pa-6 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-3">Game settings</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">@Mode.Name settings</MudText>
 
         <MudText Typo="Typo.subtitle2" Class="mb-2">Starting score</MudText>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-4">
@@ -101,46 +127,86 @@
             <MudToggleItem Value="OutMode.Master" Text="Master" />
         </MudToggleGroup>
     </MudPaper>
+    }
 
-    @* ---------------- Randomizer ---------------- *@
-    <MudPaper Class="pa-6 mb-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-3">Randomizer</MudText>
+    @* ---------------- Board modifiers ---------------- *@
+    @* Zweite Achse neben dem Modus: gelten für JEDEN Modus, der sie unterstützt.
+       Zugeklappt, weil sie selten geändert werden — der Badge zeigt trotzdem, dass
+       welche aktiv sind. *@
+    @if (Mode.SupportsBoardModifiers)
+    {
+        <MudExpansionPanels Class="mb-4" Elevation="2">
+            <MudExpansionPanel @bind-Expanded="_modifiersExpanded">
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Shuffle" Size="Size.Small" />
+                        <MudText Typo="Typo.h6">Modifiers</MudText>
+                        @if (ActiveModifierCount > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                     Variant="Variant.Filled" Class="ml-1">
+                                @ActiveModifierCount active
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">None</MudText>
+                        }
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    <MudSwitch @bind-Value="Randomize" Color="Color.Primary" Label="Randomize board" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
+                        Shuffle all field values across the board for the whole game.
+                    </MudText>
 
-        <MudSwitch @bind-Value="Randomize" Color="Color.Primary" Label="Randomize board" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
-            Shuffle all field values across the board for the whole game.
-        </MudText>
+                    <MudSwitch @bind-Value="Hidden" Color="Color.Primary" Label="Hidden values" Disabled="@(!_randomize)" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
+                        Field values stay hidden until you hit them. Requires Randomize.
+                    </MudText>
 
-        <MudSwitch @bind-Value="Hidden" Color="Color.Primary" Label="Hidden values" Disabled="@(!_randomize)" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
-            Field values stay hidden until you hit them. Requires Randomize.
-        </MudText>
+                    <MudSwitch @bind-Value="_revealNoScore" Color="Color.Primary" Label="First hit only reveals" Disabled="@(!_hiddenValues)" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+                        The revealing dart scores 0 — only hits on already-revealed fields count. Requires Hidden values.
+                    </MudText>
 
-        <MudSwitch @bind-Value="_revealNoScore" Color="Color.Primary" Label="First hit only reveals" Disabled="@(!_hiddenValues)" />
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
-            The revealing dart scores 0 — only hits on already-revealed fields count. Requires Hidden values.
-        </MudText>
+                    @if (_randomize)
+                    {
+                        <MudTextField @bind-Value="_seed"
+                                      Label="Seed (optional)"
+                                      Variant="Variant.Outlined"
+                                      Class="mt-4"
+                                      HelperText="Same seed = same shuffled board. Leave empty for a random one." />
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    }
 
-        @if (_randomize)
+    @* Klebt beim Scrollen am unteren Rand — die Seite wächst mit jedem neuen Modus,
+       der Start-Button darf dabei nicht wegwandern. *@
+    <div class="start-bar">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   FullWidth="true"
+                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                   Disabled="@(!CanStart)"
+                   OnClick="StartGame">
+            Start game
+        </MudButton>
+        @if (!CanStart)
         {
-            <MudTextField @bind-Value="_seed"
-                          Label="Seed (optional)"
-                          Variant="Variant.Outlined"
-                          Class="mt-4"
-                          HelperText="Same seed = same shuffled board. Leave empty for a random one." />
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="d-block mt-1">
+                @(Mode.MinPlayers == 1
+                    ? "Add at least one player."
+                    : $"{Mode.Name} needs at least {Mode.MinPlayers} players.")
+            </MudText>
         }
-    </MudPaper>
-
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               Size="Size.Large"
-               FullWidth="true"
-               StartIcon="@Icons.Material.Filled.PlayArrow"
-               Disabled="@(_players.Count == 0)"
-               OnClick="StartGame">
-        Start game
-    </MudButton>
+    </div>
 </MudContainer>
+
+<GameModePicker @bind-Visible="_modePickerOpen" Value="_mode" ValueChanged="OnModeChanged" />
 
 @code {
     protected override void OnInitialized() => Game.Changed += OnGameChanged;
@@ -175,12 +241,24 @@
             _hiddenValues = setup.HiddenValues;
             _revealNoScore = setup.RevealDoesNotScore;
             _randomOrder = setup.RandomOrder;
+            _mode = setup.Mode;
         }
 
         StateHasChanged();
     }
 
+    /// <summary>Die Definition des gewählten Modus — treibt Kopfzeile, Panels und Start-Button.</summary>
+    private GameModeDefinition Mode => GameModes.Get(_mode);
+
+    private bool CanStart => _players.Count >= Mode.MinPlayers;
+
+    private int ActiveModifierCount =>
+        (_randomize ? 1 : 0) + (_hiddenValues ? 1 : 0) + (_revealNoScore ? 1 : 0);
+
     private bool _prefilled;
+    private bool _modePickerOpen;
+    private bool _modifiersExpanded;
+    private GameMode _mode = SetupDefaults.Initial.Mode;
     private readonly List<string> _players = new();
     private string _newPlayerName = "";
     private int _startScore = SetupDefaults.Initial.StartingScore;
@@ -192,6 +270,15 @@
     private string _seed = "";
 
     private bool CanAddPlayer => !string.IsNullOrWhiteSpace(_newPlayerName);
+
+    // Modus gewechselt: Modifikatoren abschalten, wenn der neue Modus sie nicht trägt —
+    // sonst würde ein unsichtbares Flag ins Spiel wandern.
+    private void OnModeChanged(GameMode mode)
+    {
+        _mode = mode;
+        if (!GameModes.Get(mode).SupportsBoardModifiers)
+            Randomize = false;
+    }
 
     // Hidden values only make sense on a randomized board, so switch it off with Randomize.
     private bool Randomize
@@ -295,7 +382,8 @@
             Randomize: _randomize,
             HiddenValues: _hiddenValues,
             RevealDoesNotScore: _revealNoScore,
-            RandomOrder: _randomOrder));
+            RandomOrder: _randomOrder,
+            Mode: _mode));
 
         // Startreihenfolge zufällig mischen (falls aktiviert).
         var order = _players.ToList();
@@ -310,6 +398,7 @@
             HiddenValues: _hiddenValues,
             Seed: seed)
         {
+            Mode = _mode,
             RevealDoesNotScore = _revealNoScore,
         };
 

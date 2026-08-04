@@ -1,17 +1,29 @@
-/* Player rows are draggable (desktop); the handle hints at it. */
-::deep .player-row {
-    cursor: grab;
+/* ⚠ Hier stehen NUR Regeln für Elemente, die als echtes HTML im Markup der Page
+   liegen — die tragen das Scope-Attribut selbst, deshalb OHNE ::deep.
+   Klassen, die auf MudBlazor-KOMPONENTEN sitzen (MudPaper, MudStack, …), bekommen
+   kein Scope-Attribut; ::deep braucht einen Vorfahren mit Attribut und findet keinen,
+   weil MudContainer als Komponente ebenfalls keins hat. Solche Regeln stehen global
+   in wwwroot/css/app.css. */
+
+/* --- Sticky start bar ---
+   The page grows with every new mode, so the primary action stays reachable.
+   The fade keeps content from appearing to touch the button while scrolling. */
+.start-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding: 12px 0;
+    margin-top: 8px;
+    background: linear-gradient(
+        to bottom,
+        transparent 0,
+        var(--mud-palette-background) 12px,
+        var(--mud-palette-background) 100%
+    );
 }
 
-::deep .player-row:active {
-    cursor: grabbing;
-}
-
-::deep .drag-handle {
-    opacity: 0.4;
-}
-
-/* MudBlazor marks the drop target while dragging */
-::deep .mud-drop-item-preview {
-    opacity: 0.4;
+/* Let the text block shrink so a long tagline wraps instead of pushing the
+   "Change" button out of the mode card. */
+.mode-summary-text {
+    min-width: 0;
 }

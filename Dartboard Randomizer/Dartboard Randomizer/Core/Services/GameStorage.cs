@@ -132,7 +132,10 @@ public sealed class GameStorage
         int TurnStartScore,
         bool AwaitingContinueDecision,
         bool IsOver,
-        List<BoardPosition> RevealedPositions)
+        List<BoardPosition> RevealedPositions,
+        // Angehängt, nicht eingefügt: ältere Spielstände haben das Feld nicht, System.Text.Json
+        // belegt fehlende Konstruktorparameter mit dem Default -> altes Spiel bleibt X01.
+        GameMode Mode = GameMode.X01)
     {
         public static PersistedGame From(GameState s) => new(
             s.Players.ToList(),
@@ -147,12 +150,14 @@ public sealed class GameStorage
             s.TurnStartScore,
             s.AwaitingContinueDecision,
             s.IsOver,
-            s.RevealedPositions.ToList());
+            s.RevealedPositions.ToList(),
+            s.Mode);
 
         public GameState ToState() => new()
         {
             Players = Players,
             CurrentPlayerIndex = CurrentPlayerIndex,
+            Mode = Mode,
             OutMode = OutMode,
             StartingScore = StartingScore,
             Randomize = Randomize,

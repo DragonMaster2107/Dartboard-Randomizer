@@ -13,6 +13,13 @@ public sealed record GameSettings(
     int? Seed)
 {
     /// <summary>
+    /// Der gewählte Regelsatz. Aktuell gibt es nur <see cref="GameMode.X01"/>; die
+    /// Property trägt die Auswahl aber schon durch State und Persistenz, damit weitere
+    /// Modi nur noch ihre Regeln mitbringen müssen.
+    /// </summary>
+    public GameMode Mode { get; init; } = GameMode.X01;
+
+    /// <summary>
     /// Nur im Hidden-Modus: Der Dart, der ein Feld ERSTMALIG aufdeckt, zählt 0.
     /// Erst Treffer auf bereits aufgedeckte Felder zählen für den Score.
     /// </summary>

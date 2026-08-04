@@ -14,7 +14,8 @@ public sealed record SetupDefaults(
     bool Randomize,
     bool HiddenValues,
     bool RevealDoesNotScore,
-    bool RandomOrder)
+    bool RandomOrder,
+    GameMode Mode = GameMode.X01)
 {
     public static SetupDefaults Initial { get; } = new(
         StartingScore: 501,
@@ -22,18 +23,24 @@ public sealed record SetupDefaults(
         Randomize: false,
         HiddenValues: false,
         RevealDoesNotScore: false,
-        RandomOrder: true);
+        RandomOrder: true,
+        Mode: GameMode.X01);
 
     /// <summary>
     /// Bereinigt gespeicherte Kombinationen, die die UI gar nicht erlauben würde
-    /// (Hidden ohne Randomize, First-hit ohne Hidden) — schützt vor altem/manipuliertem Storage.
+    /// (Hidden ohne Randomize, First-hit ohne Hidden, Modifikatoren in einem Modus, der
+    /// sie nicht unterstützt) — schützt vor altem/manipuliertem Storage.
     /// </summary>
     public SetupDefaults Sanitized()
     {
-        var hidden = Randomize && HiddenValues;
+        var mode = GameModes.Get(Mode);              // unbekannter Modus -> X01
+        var randomize = mode.SupportsBoardModifiers && Randomize;
+        var hidden = randomize && HiddenValues;
         return this with
         {
             StartingScore = StartingScore < 2 ? 501 : StartingScore,
+            Mode = mode.Id,
+            Randomize = randomize,
             HiddenValues = hidden,
             RevealDoesNotScore = hidden && RevealDoesNotScore,
         };

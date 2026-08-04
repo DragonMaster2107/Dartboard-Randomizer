@@ -1,0 +1,92 @@
+@* Auswahl des Spielmodus als Karten-Galerie im Dialog.
+   Die Karten kommen komplett aus GameModes.All — ein neuer Modus braucht hier keine
+   Änderung. Gruppiert nach Kategorie, damit die Übersicht auch bei vielen Modi hält. *@
+
+<MudDialog @bind-Visible="DialogVisible" Options="_options">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="mr-2" />Game mode
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @foreach (var group in GameModes.All.GroupBy(m => m.Category))
+        {
+            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="d-block mt-2 mb-1">
+                @group.Key
+            </MudText>
+
+            @foreach (var mode in group)
+            {
+                var selected = mode.Id == Value;
+                <MudPaper Class="@ModeCardClass(selected)" Outlined="true" Elevation="0"
+                          @onclick="@(() => Select(mode.Id))">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@mode.Icon" Size="Size.Large"
+                                 Color="@(selected ? Color.Primary : Color.Default)" />
+                        <div class="mode-card-text">
+                            <MudText Typo="Typo.subtitle1">@mode.Name</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@mode.Tagline</MudText>
+                        </div>
+                        @if (selected)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" />
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+        }
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-4">
+            More game modes are coming.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly DialogOptions _options = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true,
+    };
+
+    /// <summary>Der aktuell gewählte Modus.</summary>
+    [Parameter] public GameMode Value { get; set; }
+
+    [Parameter] public EventCallback<GameMode> ValueChanged { get; set; }
+
+    [Parameter] public bool Visible { get; set; }
+
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    // MudDialog bindet an ein eigenes Feld, damit auch sein Schließen (X / Backdrop)
+    // nach oben gemeldet wird — sonst bliebe der Parameter des Aufrufers auf true.
+    private bool DialogVisible
+    {
+        get => Visible;
+        set
+        {
+            if (value == Visible)
+                return;
+
+            Visible = value;
+            _ = VisibleChanged.InvokeAsync(value);
+        }
+    }
+
+    private static string ModeCardClass(bool selected)
+        => selected ? "pa-3 mb-2 mode-card selected" : "pa-3 mb-2 mode-card";
+
+    private async Task Select(GameMode mode)
+    {
+        if (mode != Value)
+            await ValueChanged.InvokeAsync(mode);
+
+        await Close();
+    }
+
+    private async Task Close() => await VisibleChanged.InvokeAsync(false);
+}

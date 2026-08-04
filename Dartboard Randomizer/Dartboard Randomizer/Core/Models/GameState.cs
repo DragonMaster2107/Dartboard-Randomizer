@@ -10,6 +10,10 @@ public sealed record GameState
 {
     public required IReadOnlyList<PlayerState> Players { get; init; }
     public int CurrentPlayerIndex { get; init; }
+
+    /// <summary>Der Regelsatz dieses Spiels (siehe <see cref="GameMode"/>).</summary>
+    public GameMode Mode { get; init; } = GameMode.X01;
+
     public OutMode OutMode { get; init; }
     public int StartingScore { get; init; }
     public bool Randomize { get; init; }
@@ -56,6 +60,7 @@ public sealed record GameState
             })
             .ToList(),
         CurrentPlayerIndex = 0,
+        Mode = settings.Mode,
         OutMode = settings.OutMode,
         StartingScore = settings.StartingScore,
         Randomize = settings.Randomize,
