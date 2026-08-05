@@ -1,0 +1,58 @@
+@using Dartboard_Randomizer.Core.Models
+
+@* Die Chip-Leiste mit Regeln und aktiven Modifikatoren.
+   ⚠ EINE Komponente für Spiel UND Statistik: vorher stand die Leiste zweimal im Markup,
+   und beim Ergänzen neuer Modifikatoren wurde die Statistik-Variante vergessen (Hidden,
+   Conquest und Sabotage fehlten dort). Neue Modifikatoren nur noch hier eintragen. *@
+
+<MudStack Row="true" Spacing="2" Class="@Class" Wrap="Wrap.Wrap">
+    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">
+        @State.StartingScore
+    </MudChip>
+    <MudChip T="string" Size="Size.Small" Color="Color.Default">
+        @($"{State.OutMode} out")
+    </MudChip>
+    @if (State.Randomize)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Shuffle">
+            Randomized
+        </MudChip>
+    }
+    @if (State.HiddenValues)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.VisibilityOff">
+            Hidden
+        </MudChip>
+    }
+    @if (State.RevealDoesNotScore)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.LooksOne">
+            First hit only
+        </MudChip>
+    }
+    @if (State.Conquest)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Flag">
+            Conquest
+        </MudChip>
+    }
+    @if (State.Sabotage)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.TrendingUp">
+            Sabotage
+        </MudChip>
+    }
+    @if (State.Seed is int seed)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">
+            Seed @seed
+        </MudChip>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public GameState State { get; set; } = default!;
+
+    /// <summary>Abstand nach unten — im Spiel und in der Statistik identisch, aber überschreibbar.</summary>
+    [Parameter] public string Class { get; set; } = "mb-4";
+}

@@ -60,44 +60,7 @@
             </MudStack>
         </MudStack>
 
-        <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
-            <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">
-                @g.StartingScore
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                @($"{g.OutMode} out")
-            </MudChip>
-            @if (g.Randomize)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Shuffle">
-                    Randomized
-                </MudChip>
-            }
-            @if (g.HiddenValues)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.VisibilityOff">
-                    Hidden
-                </MudChip>
-            }
-            @if (g.Conquest)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Flag">
-                    Conquest
-                </MudChip>
-            }
-            @if (g.Sabotage)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.TrendingUp">
-                    Sabotage
-                </MudChip>
-            }
-            @if (g.Seed is int seed)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">
-                    Seed @seed
-                </MudChip>
-            }
-        </MudStack>
+        <GameTags State="g" />
 
         <MudPaper Class="pa-3 mb-4" Outlined="true">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">

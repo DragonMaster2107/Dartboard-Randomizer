@@ -25,18 +25,7 @@
             </MudAlert>
         }
 
-        <MudStack Row="true" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
-            <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Flag">@g.StartingScore</MudChip>
-            <MudChip T="string" Size="Size.Small" Color="Color.Default">@($"{g.OutMode} out")</MudChip>
-            @if (g.Randomize)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Shuffle">Randomized</MudChip>
-            }
-            @if (g.Seed is int seed)
-            {
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">Seed @seed</MudChip>
-            }
-        </MudStack>
+        <GameTags State="g" />
 
         @if (g.Players.Any(p => p.ScoreProgression.Count > 1))
         {
