@@ -39,6 +39,18 @@ public static class ScoringEngine
                 working = working with { FieldOwners = WithOwner(state.FieldOwners, pos, thrower) };
         }
 
+        // Sabotage (Conquest-Untermodus): ein Treffer auf ein FREMDES Feld wird dem Besitzer
+        // aufgeschlagen statt abgezogen. Checkout und Bust sind dabei ausgeschlossen — der
+        // Score kann nur steigen, die 0 also nie erreichen.
+        if (state.Sabotage && scoredBy != thrower)
+        {
+            working = working with
+            {
+                Players = UpdatePlayer(working.Players, scoredBy, p => p with { Score = p.Score + dart.Points }),
+            };
+            return AfterDart(working, state);
+        }
+
         var newScore = working.Players[scoredBy].Score - dart.Points;
 
         // Ausgecheckt: 0 UND gültiger Checkout gemäß Out-Modus. Im Conquest-Modus kann das

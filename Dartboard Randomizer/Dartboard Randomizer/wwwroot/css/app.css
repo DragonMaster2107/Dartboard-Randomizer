@@ -53,6 +53,32 @@ h1:focus {
     flex: 1 1 auto;
 }
 
+/* --- Spielerfarben-Legende im "Full board"-Dialog der Statistik ---
+   Muss global stehen: der Dialog wird per Portal in den MudDialogProvider gerendert,
+   liegt also außerhalb der Page. Eigene Klassennamen unter .board-legend, damit es die
+   scoped Legenden der Chart-Komponenten nicht berührt. */
+.board-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+    .board-legend .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+    }
+
+    .board-legend .swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        display: inline-block;
+    }
+
 /* --- Spielerliste im Setup ---
    Zeilen sind am Desktop ziehbar; der Griff deutet es an. */
 .player-row {

@@ -30,4 +30,10 @@ public sealed record GameSettings(
     /// Treffer darauf zählt für den Besitzer statt für den Werfer.
     /// </summary>
     public bool Conquest { get; init; }
+
+    /// <summary>
+    /// Nur mit <see cref="Conquest"/>: Ein Treffer auf ein <b>fremdes</b> Feld wird dem
+    /// Besitzer <b>aufgeschlagen</b> statt abgezogen — man sabotiert ihn also.
+    /// </summary>
+    public bool Sabotage { get; init; }
 }

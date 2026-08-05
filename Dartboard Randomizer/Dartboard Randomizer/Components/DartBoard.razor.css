@@ -59,6 +59,21 @@
         fill: none;
     }
 
+/* Spieler-Zuordnung in der Statistik-Ansicht. Farbe kommt inline (variiert pro Segment),
+   hier nur Deckkraft und Kontur: die Füllung bleibt durchscheinend, damit die aufgedeckte
+   Wertigkeit darunter noch lesbar ist. Statisch, wie alle Overlays. */
+.player-field {
+    pointer-events: none;
+    fill-opacity: 0.45;
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+}
+
+    /* Outer Bull: nur Kontur, sonst läge die Füllung über dem Inner Bull */
+    .player-field.ring {
+        fill: none;
+    }
+
 /* Fremdbesitz im Conquest-Modus. Signalrot (#ff1744) statt des Board-Rots (#c0392b/#d32f2f):
    deutlich heller und kräftiger gesättigt, damit die Markierung auch mitten im Doppel-
    oder Triple-Ring als App-Hinweis lesbar bleibt und nicht mit der Scheibe verschmilzt.

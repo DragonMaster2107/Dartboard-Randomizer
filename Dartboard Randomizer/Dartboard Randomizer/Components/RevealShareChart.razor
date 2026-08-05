@@ -1,0 +1,123 @@
+@using System.Globalization
+@using Dartboard_Randomizer.Core.Models
+@using Dartboard_Randomizer.Theme
+
+@* Anteil der aufgedeckten Felder pro Spieler, als Donut. Eigenes SVG aus demselben
+   Grund wie beim Burndown-Chart (MudChart ist fummelig) und in denselben Spielerfarben
+   aus PlayerPalette — die beiden Diagramme sollen direkt vergleichbar sein. *@
+
+@if (_segments.Count > 0)
+{
+    <svg viewBox="0 0 240 240" class="reveal-donut" xmlns="http://www.w3.org/2000/svg">
+        @foreach (var seg in _segments)
+        {
+            @* Ein einzelner Vollkreis-Anteil (100 %) hat keinen Bogen — sonst fallen
+               Start- und Endpunkt zusammen und der Pfad bleibt leer. *@
+            if (seg.Fraction >= 0.9999)
+            {
+                <circle cx="120" cy="120" r="@F(Radius)" fill="none"
+                        stroke="@seg.Color" stroke-width="@F(Thickness)" />
+            }
+            else
+            {
+                <path d="@ArcFor(seg)" fill="none" stroke="@seg.Color"
+                      stroke-width="@F(Thickness)" stroke-linecap="butt" />
+            }
+        }
+        <g><text x="120" y="120" class="donut-center">@RevealedTotal/@Revealable</text></g>
+        <g><text x="120" y="140" class="donut-caption">revealed</text></g>
+    </svg>
+
+    <div class="legend">
+        @foreach (var seg in _segments)
+        {
+            <span class="legend-item">
+                <span class="swatch" style="background:@seg.Color"></span>@seg.Label
+                <span class="legend-value">@Percent(seg.Fraction)</span>
+            </span>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PlayerState> Players { get; set; } = Array.Empty<PlayerState>();
+
+    /// <summary>Aufgedeckte Felder pro Spieler, indiziert wie <see cref="Players"/>.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<int> Counts { get; set; } = Array.Empty<int>();
+
+    /// <summary>Wie viele Felder insgesamt aufgedeckt werden konnten (= Nenner).</summary>
+    [Parameter] public int Revealable { get; set; }
+
+    /// <summary>
+    /// Felder, die per „Reveal all" sichtbar wurden und keinem Spieler gehören. Werden als
+    /// eigenes, helleres Segment gezeigt — sonst stünden sie unter „Unrevealed", obwohl sie
+    /// aufgedeckt sind.
+    /// </summary>
+    [Parameter] public int UncreditedReveals { get; set; }
+
+    private const double Radius = 88, Thickness = 30;
+
+    private sealed record Segment(string Label, string Color, double Fraction, double Start);
+
+    private List<Segment> _segments = new();
+    private int RevealedTotal { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _segments = new List<Segment>();
+        RevealedTotal = 0;
+
+        if (Revealable <= 0)
+            return;
+
+        var offset = 0.0;
+        for (var i = 0; i < Players.Count; i++)
+        {
+            var count = i < Counts.Count ? Counts[i] : 0;
+            if (count <= 0)
+                continue; // kein Segment und kein Legendeneintrag für 0 Felder
+
+            RevealedTotal += count;
+            var fraction = (double)count / Revealable;
+            _segments.Add(new Segment(Players[i].Name, PlayerPalette.For(i), fraction, offset));
+            offset += fraction;
+        }
+
+        // Grauer Rest, aufgeteilt: erst das per Knopfdruck Aufgedeckte (heller), dann das
+        // wirklich noch Verdeckte. Ohne die Trennung würde "Unrevealed" behaupten, Felder
+        // seien verdeckt, die sichtbar auf dem Board liegen.
+        var rest = Revealable - RevealedTotal;
+        var uncredited = Math.Clamp(UncreditedReveals, 0, Math.Max(0, rest));
+        if (uncredited > 0)
+        {
+            _segments.Add(new Segment("Revealed by button", PlayerPalette.NeutralUncredited,
+                (double)uncredited / Revealable, offset));
+            offset += (double)uncredited / Revealable;
+        }
+
+        var hidden = rest - uncredited;
+        if (hidden > 0)
+            _segments.Add(new Segment("Unrevealed", PlayerPalette.Neutral, (double)hidden / Revealable, offset));
+    }
+
+    // Kreisbogen von Start bis Start+Fraction, 0 = 12 Uhr, im Uhrzeigersinn.
+    private static string ArcFor(Segment seg)
+    {
+        var (x1, y1) = Point(seg.Start);
+        var (x2, y2) = Point(seg.Start + seg.Fraction);
+        var largeArc = seg.Fraction > 0.5 ? 1 : 0;
+        return $"M {F(x1)} {F(y1)} A {F(Radius)} {F(Radius)} 0 {largeArc} 1 {F(x2)} {F(y2)}";
+    }
+
+    private static (double X, double Y) Point(double fraction)
+    {
+        var angle = (fraction * 360 - 90) * Math.PI / 180.0;
+        return (120 + Radius * Math.Cos(angle), 120 + Radius * Math.Sin(angle));
+    }
+
+    private static string Percent(double fraction)
+        => (fraction * 100).ToString("F1", CultureInfo.InvariantCulture) + " %";
+
+    // Kultur-unabhängig, sonst Komma statt Punkt auf DE-Locale -> kaputtes SVG.
+    private static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+}

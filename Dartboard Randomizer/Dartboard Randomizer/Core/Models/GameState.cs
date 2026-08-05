@@ -31,10 +31,33 @@ public sealed record GameState
     public IReadOnlySet<BoardPosition> RevealedPositions { get; init; } = new HashSet<BoardPosition>();
 
     /// <summary>
+    /// Position → Spielerindex dessen, der sie <b>zuerst aufgedeckt</b> hat. Basis für die
+    /// Aufdeck-Statistik; historisch fix und damit unabhängig vom Conquest-Besitz, der
+    /// später noch wechseln kann.
+    /// <para>
+    /// ⚠ Enthält bewusst <b>nicht</b>: die gemeinsamen Sicherheitsfelder (die waren nie
+    /// verdeckt) und alles aus <c>RevealAll</c> (das hat kein Spieler erspielt). Solche
+    /// Positionen sind aufgedeckt, aber keinem Spieler zugeordnet.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<BoardPosition, int> RevealedBy { get; init; } =
+        new Dictionary<BoardPosition, int>();
+
+    /// <summary>
     /// Conquest-Modifikator: getroffene Felder gehören dem Spieler, der sie zuerst getroffen
     /// hat — Punkte gehen an den Besitzer, nicht an den Werfer. Setzt Hidden voraus.
     /// </summary>
     public bool Conquest { get; init; }
+
+    /// <summary>
+    /// Conquest-Untermodus: Treffer auf ein <b>fremdes</b> Feld werden dem Besitzer
+    /// <b>aufgeschlagen</b> statt abgezogen. Setzt <see cref="Conquest"/> voraus.
+    /// <para>
+    /// ⚠ Folge: Scores können über den Startwert steigen, und man kann einen Gegner nicht
+    /// mehr versehentlich auschecken — Addition erreicht die 0 nie.
+    /// </para>
+    /// </summary>
+    public bool Sabotage { get; init; }
 
     /// <summary>
     /// Position → Spielerindex des Besitzers (nur im Conquest-Modus). Liegt im State, damit
@@ -111,7 +134,10 @@ public sealed record GameState
             TurnStartScore = settings.StartingScore,
             // Die Sicherheitsfelder sind von Anfang an sichtbar — das ist ihr Zweck.
             RevealedPositions = new HashSet<BoardPosition>(shared),
+            // Die Sicherheitsfelder hat niemand aufgedeckt -> keine Zuordnung.
+            RevealedBy = new Dictionary<BoardPosition, int>(),
             Conquest = settings.Conquest,
+            Sabotage = settings.Sabotage,
             FieldOwners = new Dictionary<BoardPosition, int>(),
             SharedPositions = shared,
             AwaitingContinueDecision = false,

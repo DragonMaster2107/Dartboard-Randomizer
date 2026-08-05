@@ -47,17 +47,34 @@ public sealed class GameController
             ? FieldValue.Miss
             : dart;
 
+        // ⚠ VOR ApplyThrow festhalten: nach dem dritten Dart hat der Spieler gewechselt,
+        // aufgedeckt hat das Feld aber der, der geworfen hat.
+        var revealer = Current.CurrentPlayerIndex;
+
         // Die Position geht mit in die Engine: im Conquest-Modus entscheidet sie, wem die
         // Punkte angerechnet werden (und wer das Feld beansprucht).
         var next = ScoringEngine.ApplyThrow(Current, scoringDart, reveal);
         if (reveal is BoardPosition pos && !next.RevealedPositions.Contains(pos))
-            next = next with { RevealedPositions = new HashSet<BoardPosition>(next.RevealedPositions) { pos } };
+        {
+            next = next with
+            {
+                RevealedPositions = new HashSet<BoardPosition>(next.RevealedPositions) { pos },
+                // Aufdecker für die Statistik merken (nur beim ERSTEN Aufdecken).
+                RevealedBy = new Dictionary<BoardPosition, int>(next.RevealedBy) { [pos] = revealer },
+            };
+        }
 
         Current = next;
         NotifyChanged();
     }
 
-    /// <summary>Deckt im Hidden-Modus das komplette Board auf (rückgängig machbar).</summary>
+    /// <summary>
+    /// Deckt im Hidden-Modus das komplette Board auf (rückgängig machbar).
+    /// <para>
+    /// ⚠ <c>RevealedBy</c> bleibt unberührt: diese Felder hat kein Spieler erspielt, sie
+    /// dürfen also in der Aufdeck-Statistik niemandem angerechnet werden.
+    /// </para>
+    /// </summary>
     public void RevealAll()
     {
         if (Current is null || !Current.AcceptsThrows)

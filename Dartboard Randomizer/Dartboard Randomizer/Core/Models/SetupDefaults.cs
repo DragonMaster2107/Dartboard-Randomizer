@@ -16,7 +16,8 @@ public sealed record SetupDefaults(
     bool RevealDoesNotScore,
     bool RandomOrder,
     GameMode Mode = GameMode.X01,
-    bool Conquest = false)
+    bool Conquest = false,
+    bool Sabotage = false)
 {
     public static SetupDefaults Initial { get; } = new(
         StartingScore: 501,
@@ -26,18 +27,21 @@ public sealed record SetupDefaults(
         RevealDoesNotScore: false,
         RandomOrder: true,
         Mode: GameMode.X01,
-        Conquest: false);
+        Conquest: false,
+        Sabotage: false);
 
     /// <summary>
     /// Bereinigt gespeicherte Kombinationen, die die UI gar nicht erlauben würde
-    /// (Hidden ohne Randomize, First-hit/Conquest ohne Hidden, Modifikatoren in einem Modus,
-    /// der sie nicht unterstützt) — schützt vor altem/manipuliertem Storage.
+    /// (Hidden ohne Randomize, First-hit/Conquest ohne Hidden, Sabotage ohne Conquest,
+    /// Modifikatoren in einem Modus, der sie nicht unterstützt) — schützt vor
+    /// altem/manipuliertem Storage.
     /// </summary>
     public SetupDefaults Sanitized()
     {
         var mode = GameModes.Get(Mode);              // unbekannter Modus -> X01
         var randomize = mode.SupportsBoardModifiers && Randomize;
         var hidden = randomize && HiddenValues;
+        var conquest = hidden && Conquest;
         return this with
         {
             StartingScore = StartingScore < 2 ? 501 : StartingScore,
@@ -45,7 +49,8 @@ public sealed record SetupDefaults(
             Randomize = randomize,
             HiddenValues = hidden,
             RevealDoesNotScore = hidden && RevealDoesNotScore,
-            Conquest = hidden && Conquest,
+            Conquest = conquest,
+            Sabotage = conquest && Sabotage,
         };
     }
 }

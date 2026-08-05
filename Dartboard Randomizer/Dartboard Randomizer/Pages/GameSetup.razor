@@ -170,11 +170,17 @@
                         The revealing dart scores 0 — only hits on already-revealed fields count. Requires Hidden values.
                     </MudText>
 
-                    <MudSwitch @bind-Value="_conquest" Color="Color.Primary" Label="Conquest" Disabled="@(!_hiddenValues)" />
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+                    <MudSwitch @bind-Value="Conquest" Color="Color.Primary" Label="Conquest" Disabled="@(!_hiddenValues)" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 ml-14">
                         Conquer fields by hitting them first — every later hit on a field scores
                         for its owner, no matter who threw the dart. One Single 1 and the Double 1
                         stay open to everyone so a checkout is always possible. Requires Hidden values.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="_sabotage" Color="Color.Primary" Label="Sabotage" Disabled="@(!_conquest)" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-14">
+                        Hitting someone else's field <b>adds</b> the points to their score instead
+                        of subtracting them. Your own fields still count down as usual. Requires Conquest.
                     </MudText>
 
                     @if (_randomize)
@@ -248,6 +254,7 @@
             _hiddenValues = setup.HiddenValues;
             _revealNoScore = setup.RevealDoesNotScore;
             _conquest = setup.Conquest;
+            _sabotage = setup.Sabotage;
             _randomOrder = setup.RandomOrder;
             _mode = setup.Mode;
         }
@@ -261,7 +268,8 @@
     private bool CanStart => _players.Count >= Mode.MinPlayers;
 
     private int ActiveModifierCount =>
-        (_randomize ? 1 : 0) + (_hiddenValues ? 1 : 0) + (_revealNoScore ? 1 : 0) + (_conquest ? 1 : 0);
+        (_randomize ? 1 : 0) + (_hiddenValues ? 1 : 0) + (_revealNoScore ? 1 : 0)
+        + (_conquest ? 1 : 0) + (_sabotage ? 1 : 0);
 
     private bool _prefilled;
     private bool _modePickerOpen;
@@ -275,6 +283,7 @@
     private bool _hiddenValues = SetupDefaults.Initial.HiddenValues;
     private bool _revealNoScore = SetupDefaults.Initial.RevealDoesNotScore;
     private bool _conquest = SetupDefaults.Initial.Conquest;
+    private bool _sabotage = SetupDefaults.Initial.Sabotage;
     private bool _randomOrder = SetupDefaults.Initial.RandomOrder;
     private string _seed = "";
 
@@ -300,7 +309,7 @@
             {
                 _hiddenValues = false;
                 _revealNoScore = false;
-                _conquest = false;
+                Conquest = false;
                 _seed = "";
             }
         }
@@ -316,8 +325,20 @@
             if (!value)
             {
                 _revealNoScore = false;
-                _conquest = false;
+                Conquest = false;
             }
+        }
+    }
+
+    // "Sabotage" ist ein Untermodus von Conquest und geht mit ihm aus.
+    private bool Conquest
+    {
+        get => _conquest;
+        set
+        {
+            _conquest = value;
+            if (!value)
+                _sabotage = false;
         }
     }
 
@@ -397,7 +418,8 @@
             RevealDoesNotScore: _revealNoScore,
             RandomOrder: _randomOrder,
             Mode: _mode,
-            Conquest: _conquest));
+            Conquest: _conquest,
+            Sabotage: _sabotage));
 
         // Startreihenfolge zufällig mischen (falls aktiviert).
         var order = _players.ToList();
@@ -415,6 +437,7 @@
             Mode = _mode,
             RevealDoesNotScore = _revealNoScore,
             Conquest = _conquest,
+            Sabotage = _sabotage,
         };
 
         Game.StartGame(settings);

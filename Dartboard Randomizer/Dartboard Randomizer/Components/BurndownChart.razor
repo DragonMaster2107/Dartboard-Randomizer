@@ -1,5 +1,6 @@
 @using System.Globalization
 @using Dartboard_Randomizer.Core.Models
+@using Dartboard_Randomizer.Theme
 
 @if (_maxIndex >= 1)
 {
@@ -7,7 +8,7 @@
         @* horizontal gridlines + y labels *@
         @for (var t = 0; t <= 4; t++)
         {
-            var val = StartingScore * (4 - t) / 4;
+            var val = _axisMax * (4 - t) / 4;
             var y = YFor(val);
             <line x1="@F(PlotLeft)" y1="@F(y)" x2="@F(PlotRight)" y2="@F(y)" class="grid" />
             <g><text x="@F(PlotLeft - 4)" y="@F(y)" class="y-label">@val</text></g>
@@ -22,7 +23,7 @@
         @* one line per player *@
         @for (var pi = 0; pi < Players.Count; pi++)
         {
-            var color = Palette[pi % Palette.Length];
+            var color = PlayerPalette.For(pi);
             <polyline points="@PointsFor(Players[pi])" fill="none" stroke="@color" stroke-width="2" class="line" />
         }
     </svg>
@@ -30,7 +31,7 @@
     <div class="legend">
         @for (var pi = 0; pi < Players.Count; pi++)
         {
-            var color = Palette[pi % Palette.Length];
+            var color = PlayerPalette.For(pi);
             <span class="legend-item">
                 <span class="swatch" style="background:@color"></span>@Players[pi].Name
             </span>
@@ -42,19 +43,28 @@
     [Parameter, EditorRequired] public IReadOnlyList<PlayerState> Players { get; set; } = Array.Empty<PlayerState>();
     [Parameter] public int StartingScore { get; set; }
 
-    private static readonly string[] Palette =
-        { "#d32f2f", "#1e88e5", "#43a047", "#fbc02d", "#8e24aa", "#00acc1", "#f4511e", "#3949ab" };
-
     private const double PlotLeft = 34, PlotRight = 392, PlotTop = 10, PlotBottom = 224;
 
     private int _maxIndex;
 
+    // Obergrenze der Y-Achse. ⚠ Nicht einfach StartingScore: im Sabotage-Modus bekommen
+    // Spieler Punkte AUFGESCHLAGEN, ihr Stand kann den Startwert also überschreiten — mit
+    // fester Skala liefe die Linie oben aus dem SVG.
+    private int _axisMax;
+
     protected override void OnParametersSet()
-        => _maxIndex = Players.Count == 0 ? 0 : Players.Max(p => p.ScoreProgression.Count) - 1;
+    {
+        _maxIndex = Players.Count == 0 ? 0 : Players.Max(p => p.ScoreProgression.Count) - 1;
+
+        var highest = Players.Count == 0
+            ? 0
+            : Players.Max(p => p.ScoreProgression.Count == 0 ? 0 : p.ScoreProgression.Max());
+        _axisMax = Math.Max(StartingScore, highest);
+    }
 
     private double XFor(int i) => _maxIndex == 0 ? PlotLeft : PlotLeft + (PlotRight - PlotLeft) * i / _maxIndex;
 
-    private double YFor(int score) => StartingScore <= 0 ? PlotBottom : PlotBottom - (PlotBottom - PlotTop) * score / StartingScore;
+    private double YFor(int score) => _axisMax <= 0 ? PlotBottom : PlotBottom - (PlotBottom - PlotTop) * score / _axisMax;
 
     private string PointsFor(PlayerState p)
     {

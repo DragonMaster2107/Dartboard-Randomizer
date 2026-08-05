@@ -141,7 +141,9 @@ public sealed class GameStorage
         // nicht als JSON-Objektschlüssel (derselbe Grund, aus dem dieses DTO existiert).
         List<OwnedField>? FieldOwners = null,
         List<BoardPosition>? SharedPositions = null,
-        int? PendingFinisherIndex = null)
+        int? PendingFinisherIndex = null,
+        List<OwnedField>? RevealedBy = null,
+        bool Sabotage = false)
     {
         public static PersistedGame From(GameState s) => new(
             s.Players.ToList(),
@@ -161,7 +163,9 @@ public sealed class GameStorage
             s.Conquest,
             s.FieldOwners.Select(kv => new OwnedField(kv.Key, kv.Value)).ToList(),
             s.SharedPositions.ToList(),
-            s.PendingFinisherIndex);
+            s.PendingFinisherIndex,
+            s.RevealedBy.Select(kv => new OwnedField(kv.Key, kv.Value)).ToList(),
+            s.Sabotage);
 
         public GameState ToState() => new()
         {
@@ -184,9 +188,15 @@ public sealed class GameStorage
                           ?? new Dictionary<BoardPosition, int>(),
             SharedPositions = SharedPositions?.ToHashSet() ?? new HashSet<BoardPosition>(),
             PendingFinisherIndex = PendingFinisherIndex,
+            RevealedBy = RevealedBy?.ToDictionary(o => o.Position, o => o.PlayerIndex)
+                         ?? new Dictionary<BoardPosition, int>(),
+            Sabotage = Sabotage,
         };
     }
 
-    /// <summary>Ein beanspruchtes Feld für die Serialisierung (siehe <see cref="PersistedGame"/>).</summary>
+    /// <summary>
+    /// Eine Position mit zugeordnetem Spieler für die Serialisierung — genutzt für
+    /// <c>FieldOwners</c> und <c>RevealedBy</c> (siehe <see cref="PersistedGame"/>).
+    /// </summary>
     private sealed record OwnedField(BoardPosition Position, int PlayerIndex);
 }

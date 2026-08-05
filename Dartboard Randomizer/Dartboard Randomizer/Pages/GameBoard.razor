@@ -85,6 +85,12 @@
                     Conquest
                 </MudChip>
             }
+            @if (g.Sabotage)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.TrendingUp">
+                    Sabotage
+                </MudChip>
+            }
             @if (g.Seed is int seed)
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Tag">

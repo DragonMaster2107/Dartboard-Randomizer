@@ -46,6 +46,18 @@
             </MudPaper>
         }
 
+        @* Aufdeck-Anteile — nur im Hidden-Modus sinnvoll (ohne ihn ist alles von Anfang
+           an sichtbar). Gleiche Spielerfarben wie im Burndown darüber. *@
+        @if (g.HiddenValues)
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-2">Fields revealed</MudText>
+                <RevealShareChart Players="g.Players" Counts="_revealCounts"
+                                  Revealable="RevealStats.Revealable(g)"
+                                  UncreditedReveals="RevealStats.UncreditedReveals(g)" />
+            </MudPaper>
+        }
+
         <MudTable Items="g.Ranking" Hover="true" Dense="true" Class="mb-4" Elevation="2">
             <HeaderContent>
                 <MudTh>#</MudTh>
@@ -53,6 +65,10 @@
                 <MudTh Style="text-align:right">Darts</MudTh>
                 <MudTh Style="text-align:right">3-dart avg</MudTh>
                 <MudTh Style="text-align:right">Highest turn</MudTh>
+                @if (g.HiddenValues)
+                {
+                    <MudTh Style="text-align:right">Revealed</MudTh>
+                }
                 <MudTh Style="text-align:right">Left</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -61,6 +77,10 @@
                 <MudTd DataLabel="Darts" Style="text-align:right">@context.DartsThrown</MudTd>
                 <MudTd DataLabel="3-dart avg" Style="text-align:right">@Average(context)</MudTd>
                 <MudTd DataLabel="Highest turn" Style="text-align:right">@context.HighestTurn</MudTd>
+                @if (g.HiddenValues)
+                {
+                    <MudTd DataLabel="Revealed" Style="text-align:right">@RevealedBy(context)</MudTd>
+                }
                 <MudTd DataLabel="Left" Style="text-align:right">@context.Score</MudTd>
             </RowTemplate>
         </MudTable>
@@ -83,9 +103,38 @@
                 <MudText Typo="Typo.h6">Full board</MudText>
             </TitleContent>
             <DialogContent>
+                @* Nur im Conquest-Modus: die Verteilung in Spielerfarben, umschaltbar
+                   zwischen Aufdecker und (End-)Besitzer. Das Board selbst ist in jedem
+                   Modus vollständig aufgedeckt. *@
+                @if (g.Conquest)
+                {
+                    <MudToggleGroup T="BoardView" @bind-Value="_boardView" Color="Color.Primary"
+                                    Size="Size.Small" Class="mb-2">
+                        <MudToggleItem Value="BoardView.RevealedBy" Text="Revealed by" />
+                        <MudToggleItem Value="BoardView.OwnedBy" Text="Owned by" />
+                    </MudToggleGroup>
+                    @* Macht den Unterschied zwischen den beiden Ansichten nachvollziehbar:
+                       nach einem "Reveal all" erobern Treffer weiter, decken aber nichts
+                       mehr auf — dann zeigt "Owned by" mehr Felder als "Revealed by". *@
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-2">
+                        @BoardCaption(g)
+                    </MudText>
+                }
                 @if (_boardLayout is not null)
                 {
-                    <DartBoard Layout="_boardLayout" Hidden="false" />
+                    <DartBoard Layout="_boardLayout" Hidden="false" PlayerFields="HighlightedFields(g)" />
+                }
+                @if (g.Conquest)
+                {
+                    <div class="board-legend">
+                        @for (var i = 0; i < g.Players.Count; i++)
+                        {
+                            var color = PlayerPalette.For(i);
+                            <span class="legend-item">
+                                <span class="swatch" style="background:@color"></span>@g.Players[i].Name
+                            </span>
+                        }
+                    </div>
                 }
             </DialogContent>
             <DialogActions>
@@ -100,6 +149,14 @@
     private bool _showBoard;
     private readonly DialogOptions _boardDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
+    /// <summary>Welche Zuordnung das Board im Conquest-Modus einfärbt.</summary>
+    private enum BoardView { RevealedBy, OwnedBy }
+
+    private BoardView _boardView = BoardView.RevealedBy;
+
+    // Aufgedeckte Felder pro Spieler — einmal berechnet, von Chart und Tabelle genutzt.
+    private IReadOnlyList<int> _revealCounts = Array.Empty<int>();
+
     protected override void OnInitialized()
     {
         var g = Game.Current;
@@ -110,6 +167,58 @@
         _boardLayout = g is { Randomize: true, Seed: int seed }
             ? BoardLayout.Shuffled(seed)
             : BoardLayout.Standard();
+
+        _revealCounts = RevealStats.CountsByPlayer(g);
+    }
+
+    /// <summary>
+    /// Die Einfärbung fürs Board. Nur im Conquest-Modus — sonst leer, dann zeigt das Board
+    /// wie bisher einfach alle Wertigkeiten.
+    /// <para>
+    /// „Owned by" nimmt <c>FieldOwners</c> <b>roh</b>, also ohne die Spielregel „Besitz
+    /// erlischt beim Auschecken": in der Rückschau interessiert, wer das Feld am Ende
+    /// erobert hatte. Mit dem Filter wäre das Board nach einem ausgespielten Spiel leer.
+    /// </para>
+    /// </summary>
+    private IReadOnlyDictionary<BoardPosition, int> HighlightedFields(GameState g)
+    {
+        if (!g.Conquest)
+            return EmptyFields;
+
+        return _boardView == BoardView.OwnedBy ? g.FieldOwners : g.RevealedBy;
+    }
+
+    private static readonly IReadOnlyDictionary<BoardPosition, int> EmptyFields =
+        new Dictionary<BoardPosition, int>();
+
+    /// <summary>
+    /// Beschriftung unter dem Umschalter: wie viele Felder gerade eingefärbt sind — und der
+    /// Grund, wenn beide Ansichten unterschiedlich viele zeigen.
+    /// </summary>
+    private string BoardCaption(GameState g)
+    {
+        var shown = HighlightedFields(g).Count;
+        var what = _boardView == BoardView.OwnedBy ? "conquered" : "revealed";
+        var caption = $"{shown} of {RevealStats.Revealable(g)} fields {what} by a player";
+
+        var uncredited = RevealStats.UncreditedReveals(g);
+        if (uncredited > 0)
+            caption += $" · {uncredited} uncovered with “Reveal” and credited to no one";
+
+        return caption;
+    }
+
+    // Die Tabelle läuft über Ranking, die Farben/Zähler hängen am Index in Players.
+    // Namen sind im Setup eindeutig (case-insensitive), taugen also als Schlüssel.
+    private int RevealedBy(PlayerState player)
+    {
+        var players = Game.Current!.Players;
+        for (var i = 0; i < players.Count; i++)
+        {
+            if (players[i].Name == player.Name)
+                return i < _revealCounts.Count ? _revealCounts[i] : 0;
+        }
+        return 0;
     }
 
     // 3-Dart-Average = erzielte Punkte / geworfene Darts * 3.

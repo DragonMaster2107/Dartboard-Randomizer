@@ -1,5 +1,6 @@
 @using System.Globalization
 @using Dartboard_Randomizer.Core.Board
+@using Dartboard_Randomizer.Theme
 @inject AppSettings Settings
 @implements IDisposable
 
@@ -44,6 +45,26 @@
     {
         var (x, y) = Polar(RLabel, -90 + i * 18);
         <g><text x="@F(x)" y="@F(y)" class="outer-number">@NumberOrder[i]</text></g>
+    }
+
+    @* Spieler-Zuordnung (nur in der Statistik): jedes Feld in der Farbe des Spielers, dem
+       es zugerechnet wird. Eigene Ebene wie die übrigen Overlays; die Farbe muss inline
+       kommen, weil sie pro Segment variiert. *@
+    @foreach (var (pos, playerIndex) in PlayerFields)
+    {
+        var color = PlayerPalette.For(playerIndex);
+        if (pos.Ring is BoardRing.OuterBull)
+        {
+            <circle cx="0" cy="0" r="15.9" class="player-field ring" stroke="@color" />
+        }
+        else if (pos.Ring is BoardRing.InnerBull)
+        {
+            <circle cx="0" cy="0" r="6.35" class="player-field" fill="@color" stroke="@color" />
+        }
+        else if (GeoByPosition.TryGetValue(pos, out var pgeo))
+        {
+            <path d="@pgeo.Path" class="player-field" fill="@color" stroke="@color" />
+        }
     }
 
     @* Fremdbesitz (Conquest-Modus): Felder, die einem anderen Spieler gehören. Eigene Ebene
@@ -111,6 +132,15 @@
     /// Positionen, die im Conquest-Modus einem anderen Spieler gehören — werden rot umrandet.
     /// </summary>
     [Parameter] public IReadOnlySet<BoardPosition> Foreign { get; set; } = EmptyRevealed;
+
+    /// <summary>
+    /// Position → Spielerindex, in der jeweiligen Spielerfarbe eingefärbt (Statistik-Ansicht
+    /// „wer hat aufgedeckt/besitzt was"). Im laufenden Spiel leer.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<BoardPosition, int> PlayerFields { get; set; } = EmptyPlayerFields;
+
+    private static readonly IReadOnlyDictionary<BoardPosition, int> EmptyPlayerFields =
+        new Dictionary<BoardPosition, int>();
 
     private static readonly IReadOnlyList<CheckoutTargets.Target> EmptyTargets =
         Array.Empty<CheckoutTargets.Target>();
